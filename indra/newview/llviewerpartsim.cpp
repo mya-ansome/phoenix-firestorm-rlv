@@ -43,6 +43,9 @@
 #include "llvoavatarself.h"
 #include "llvovolume.h"
 
+#include "rlvactions.h"
+#include "rlvhandler.h"
+
 const F32 PART_SIM_BOX_SIDE = 16.f;
 
 //static
@@ -729,6 +732,32 @@ void LLViewerPartSim::updateSimulation()
 					upd = FALSE;
 				}
 			}
+
+//MK
+			// If our vision is obscured enough, particles in world and worn by other avatars
+			// may give their position away (because of a rendering issue) => hide them if their source object is too far.
+			if (RlvHandler::isEnabled() && RlvActions::isCameraDistanceClamped())
+			{
+				LLViewerObject* vobj = mViewerPartSources[i]->mSourceObjectp;
+				if (vobj && (vobj->getPCode() == LL_PCODE_VOLUME))
+				{
+					LLVOVolume* vvo = (LLVOVolume *)vobj;
+					//if (vvo && vvo->getAvatar() != gAgentAvatarp)
+					if (vvo && gAgentAvatarp && gAgentAvatarp->mHeadp) // && (vvo->getAvatar() != gAgentAvatarp || !vvo->isAttachment()))
+					{
+						LLVector3 joint_pos = RlvHandler::getInstance()->getCamDistDrawFromJoint()->getWorldPosition();
+
+						LLVector3 offset = vvo->getPositionRegion() - joint_pos;
+						F32 distance = (F32)offset.magVec();
+							static RlvCachedBehaviourModifier<float> mCamDistDrawMax(RLV_MODIFIER_SETCAM_DRAWMAX);
+						if(distance > mCamDistDrawMax)
+						{
+							upd = FALSE;
+						}
+					}
+				}
+			}
+//mk
 
 			if (upd) 
 			{

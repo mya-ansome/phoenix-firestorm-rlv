@@ -4565,7 +4565,44 @@ void LLVOAvatar::updateFootstepSounds()
 //------------------------------------------------------------------------
 void LLVOAvatar::computeUpdatePeriod()
 {
+	//MK
+	mCachedIsRlvSilhouette = FALSE;
+	if (RlvHandler::isEnabled() && !isSelf() && gAgentAvatarp && getRezzedStatus() >= 2) // fully rezzed
+	{
+		static RlvCachedBehaviourModifier<float> mCamDistDrawMax(RLV_MODIFIER_SETCAM_DRAWMAX);
+		LLVector3d my_head_pos (gAgent.getPosGlobalFromAgent(gAgentAvatarp->mHeadp->getWorldPosition()));
+		LLVector3d their_head_pos (gAgent.getPosGlobalFromAgent(mHeadp->getWorldPosition()));
+		LLVector3d offset (their_head_pos - my_head_pos);
+		F32 distance_squared = (F32)offset.magVecSquared();
+		static RlvCachedBehaviourModifier<float> mShowavsDistMax(RLV_MODIFIER_SETCAM_AVDISTMAX);
+		F32 show_avs_dist_max_squared = mShowavsDistMax * mShowavsDistMax;
+		F32 cam_dist_draw_max_squared = mCamDistDrawMax * mCamDistDrawMax;
+
+		// If the avatar is farther than the "camavdist" distance, render as silhouette.
+		// But if the outer sphere is opaque, no need to render a silhouette or even the avatar at all.
+		static RlvCachedBehaviourModifier<float> mCamAlphaDrawMax(RLV_MODIFIER_SETCAM_DRAWALPHAMAX);
+		mCachedIsRlvSilhouette = (
+			distance_squared > show_avs_dist_max_squared
+			&& !(distance_squared > cam_dist_draw_max_squared && mCamAlphaDrawMax >= 1.f)
+			);
+	}
+//mk
+
 	bool visually_muted = isVisuallyMuted();
+	/*
+//MK
+	bool silhouette = isSilhouette();
+	if (mDrawable.notNull()
+        && isVisible() 
+////        && (!isSelf() || visually_muted)
+		&& (!isSelf() || visually_muted || silhouette)
+        && !isUIAvatar()
+////		&& sUseImpostors
+		&& (sUseImpostors || silhouette)
+        && !mNeedsAnimUpdate 
+        && !sFreezeCounter)
+//mk
+*/
 	if (mDrawable.notNull()
         && isVisible() 
         && (!isSelf() || visually_muted)
@@ -8895,6 +8932,31 @@ BOOL LLVOAvatar::isFullyLoaded() const
 
 bool LLVOAvatar::isTooComplex() const
 {
+//MK
+	// If the vision is restricted and the outer sphere is opaque (or almost), and if the avatar is far enough, optimize by pretending it is too complex
+	if (RlvHandler::isEnabled() && RlvActions::isCameraDistanceClamped())
+	{
+		if (!isSelf())
+		{
+			static RlvCachedBehaviourModifier<float> mCamAlphaDrawMax(RLV_MODIFIER_SETCAM_DRAWALPHAMAX);
+			if (mCamAlphaDrawMax >= ALPHA_ALMOST_OPAQUE)
+			{
+				static RlvCachedBehaviourModifier<float> mCamDistDrawMax(RLV_MODIFIER_SETCAM_DRAWMAX);
+				LLVector3 avatar_pos = getPositionAgent();
+				LLVector3 joint_pos = RlvHandler::getInstance()->getCamDistDrawFromJoint()->getWorldPosition();
+				LLVector3 avatar_pos_relative = avatar_pos - joint_pos;
+
+				F32 cam_dist_draw_max_squared = mCamDistDrawMax * mCamDistDrawMax;
+				F32 distance_to_self_squared = (F32)avatar_pos_relative.magVecSquared();
+				if (distance_to_self_squared > cam_dist_draw_max_squared + 2.0f)
+				{
+					return true;
+				}
+			}
+		}
+	}
+//mk
+
 	bool too_complex;
 	// <FS:Ansariel> Performance improvement
 	//bool render_friend =  (LLAvatarTracker::instance().isBuddy(getID()) && gSavedSettings.getBOOL("AlwaysRenderFriends"));

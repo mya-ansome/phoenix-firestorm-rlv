@@ -86,6 +86,8 @@ extern BOOL gDoDisconnect;
 bool RlvHandler::m_fEnabled = false;
 
 rlv_handler_t gRlvHandler;
+bool RlvHandler::sRenderLimitRenderedThisFrame = false;
+
 
 // ============================================================================
 // Command specific helper functions
@@ -3925,6 +3927,166 @@ void RlvHandler::setOverlayImage(const LLUUID& idTexture)
 	m_nOverlayOrigBoost = m_pOverlayImage->getBoostLevel();
 	m_pOverlayImage->setBoostLevel(LLGLTexture::BOOST_PREVIEW);
 	m_pOverlayImage->forceToSaveRawImage(0);
+}
+
+
+
+
+#define UPPER_ALPHA_LIMIT 0.999999f
+// This function returns the effective alpha to set to each step when going from
+// 0.0 to "desired_alpha", so that everything seen through the last layer will
+// be obscured as if it were behind only one layer of alpha "desired_alpha", 
+// regardless of the number of layers "nb_layers"
+// If we have N layers and want a transparency T (T = 1-A), we want to find X so that
+// X**N = T (because combined transparencies multiply), in other words, X = T**(1/N)
+// The problem with this formula is that with a target transparency of 0 (alpha = 1), we would
+// not get any gradient at all so we need to limit the alpha to a maximum that is lower than 1.
+F32 calculateDesiredAlphaPerStep (F32 desired_alpha, int nb_layers)
+{
+	double trans_at_this_step;
+	if (desired_alpha > UPPER_ALPHA_LIMIT) {
+		desired_alpha = UPPER_ALPHA_LIMIT;
+	}
+	double desired_trans = (double)(1.f - desired_alpha);
+	trans_at_this_step = pow (desired_trans, 1.0/(double)nb_layers);
+
+	return (F32)(1.0 - trans_at_this_step);
+}
+
+
+// This method draws several big black spheres around the avatar, with various alphas
+// Alpha goes from mCamDistDrawAlphaMin to mCamDistDrawAlphaMax
+// Things to remember :
+// - There are two render limits in RLV : min and max (min is a sphere with a variable alpha
+//   and max is an opaque sphere).
+// - Render limit min <= render limit max.
+// - If a render limit is <= 1.0, make it 1.0 because we'll be forced into mouselook anyway,
+//   so it would be better to render the sphere
+// - If a render limit is unspecified (i.e. equal to EXTREMUM), don't render it.
+// - If both render limits are specified and different, render both and several in-between at 
+//   regular intervals, with a linear interpolation for alpha between mCamDistDrawAlphaMin and
+//   mCamDistDrawAlphaMax for each sphere.
+// - There are not too many spheres to render, because stacking alphas makes the video card
+//   complain.
+// - If force_opaque is TRUE, then the inner sphere will be opaque and no other sphere will be rendered.
+void RlvHandler::drawRenderLimit (BOOL force_opaque /*= FALSE*/)
+{
+	//if (true) return;
+
+	//if (sRenderLimitRenderedThisFrame) { // already rendered the vision spheres during this rendering frame ? => bail
+	//	return;
+	//}
+
+	static RlvCachedBehaviourModifier<float> mCamDistDrawMin(RLV_MODIFIER_SETCAM_DRAWMIN);
+	static RlvCachedBehaviourModifier<float> mCamDistDrawMax(RLV_MODIFIER_SETCAM_DRAWMAX);
+	static RlvCachedBehaviourModifier<float> mCamDistDrawAlphaMin(RLV_MODIFIER_SETCAM_DRAWALPHAMIN);
+	static RlvCachedBehaviourModifier<float> mCamDistDrawAlphaMax(RLV_MODIFIER_SETCAM_DRAWALPHAMAX);
+
+	LLColor3 mCamDistDrawColor(0.0f, 0.0f, 0.0f);
+	int mCamDistNbGradients = 40;
+
+	gGL.setColorMask(true, false);
+	if (LLGLSLShader::sNoFixedFunction) {
+		gUIProgram.bind();
+	}
+
+	gGL.getTexUnit(0)->unbind(LLTexUnit::TT_TEXTURE);
+	gGL.matrixMode(LLRender::MM_MODELVIEW);
+	gPipeline.disableLights();
+
+	// Calculate the center of the spheres
+	LLVector3 center = isAgentAvatarValid() 
+		? getCamDistDrawFromJoint()->getWorldPosition()
+		: gAgent.getPositionAgent();
+
+	// If the inner sphere is opaque, just render it and no other.
+	// Also make the inner sphere opaque if we're highlighting invisible surfaces or if anything is highlighted by a selection (edit, select or drag and drop).
+	if (force_opaque
+	|| LLDrawPoolAlpha::sShowDebugAlpha
+	|| (LLSelectMgr::getInstance()->mRenderHighlightSelections && (!LLSelectMgr::getInstance()->getSelection()->isEmpty() || LLToolDragAndDrop::getInstance()->getCargoCount() > 0))
+	|| mCamDistDrawAlphaMin >= UPPER_ALPHA_LIMIT)
+	{
+		drawSphere(center, mCamDistDrawMin, mCamDistDrawColor, 1.f);
+	}
+	else {
+		// If the outer sphere is opaque, render it now before switching to blend mode
+		if (mCamDistDrawAlphaMax >= UPPER_ALPHA_LIMIT) {
+			drawSphere(center, mCamDistDrawMax, mCamDistDrawColor, 1.f);
+		}
+
+		// Switch to blend mode now
+		LLGLEnable gls_blend(GL_BLEND);
+		LLGLEnable gls_cull(GL_CULL_FACE);
+		LLGLEnable alpha_test(GL_ALPHA_TEST);
+		LLGLDepthTest gls_depth(GL_TRUE, GL_FALSE);
+		gGL.setColorMask(true, false);
+
+		F32 alpha_step = calculateDesiredAlphaPerStep(mCamDistDrawAlphaMax, mCamDistNbGradients);
+
+		// if the outer sphere is not opaque, render it now since we haven't before switching
+		// to blend mode.
+		if (mCamDistDrawAlphaMax < UPPER_ALPHA_LIMIT) {
+			drawSphere(center, mCamDistDrawMax, mCamDistDrawColor, alpha_step);
+		}
+
+		// Draw from the outer sphere (excluded) to the inner sphere, knowing that we are currently in blend mode
+		for (int i = mCamDistNbGradients - 1; i > 0; i--) {
+			drawSphere(center
+				, lerp(mCamDistDrawMin, mCamDistDrawMax, (F32)i / (F32)mCamDistNbGradients)
+				, mCamDistDrawColor
+				, alpha_step
+			);
+		}
+	}
+
+	gGL.flush();
+	gGL.setColorMask(true, false);
+
+	if (LLGLSLShader::sNoFixedFunction) {
+		gUIProgram.unbind();
+	}
+
+	RlvHandler::sRenderLimitRenderedThisFrame = TRUE;
+}
+
+void RlvHandler::drawSphere (LLVector3 center, F32 scale, LLColor3 color, F32 alpha)
+{
+	LLRenderSphere gSphere;
+	// Don't bother if the sphere is invisible
+	if (alpha < 0.0001f)
+	{
+		return;
+	}
+	//gGL.pushMatrix();
+	{
+		gGL.pushMatrix();
+		//gGL.loadIdentity();
+		{
+			gGL.translatef(center[0], center[1], center[2]);
+			gGL.scalef(scale, scale, scale);
+
+			LLColor4 color_alpha(color, alpha);
+			gGL.color4fv(color_alpha.mV);
+				
+			// Render inside only (the camera is not supposed to go outside anyway)
+			glCullFace(GL_FRONT);
+			gSphere.render();
+			glCullFace(GL_BACK);
+		}
+		gGL.popMatrix();
+	}
+	//gGL.popMatrix();
+}
+
+LLJoint* RlvHandler::getCamDistDrawFromJoint ()
+{
+	if (!gAgentAvatarp) {
+		return NULL;
+	}
+	if (!mCamDistDrawFromJoint || CAMERA_MODE_MOUSELOOK == gAgentCamera.getCameraMode()) {
+		return gAgentAvatarp->mHeadp;
+	}
+	return mCamDistDrawFromJoint;
 }
 
 // ============================================================================

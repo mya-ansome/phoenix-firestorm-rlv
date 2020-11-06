@@ -1419,6 +1419,16 @@ void render_ui(F32 zoom_factor, int subfield)
     // Finalize scene
     gPipeline.renderFinalize();
 
+//MK
+		// Draw a big black sphere around our avatar if the camera render is limited by RLV
+		// This call happens only while the avatar is a cloud. This is a crutch while we wait
+		// for the real call in lldrawpoolavatar.cpp to be possible.
+		if (RlvHandler::isEnabled() && (!gAgentAvatarp || !gAgentAvatarp->isFullyLoaded() || !RlvHandler::sRenderLimitRenderedThisFrame))
+		{
+			RlvHandler::getInstance()->drawRenderLimit (TRUE); // force opaque because in this degraded case, it is possible to cheat if the outer sphere is not fully opaque because it will be rendered differently (probably the OpenGL engine is not configured for this at this stage)
+		}
+//mk
+
     LL_RECORD_BLOCK_TIME(FTM_RENDER_HUD);
     render_hud_elements();
 // [RLVa:KB] - Checked: RLVa-2.2 (@setoverlay)
