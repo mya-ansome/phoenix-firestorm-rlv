@@ -217,6 +217,18 @@ RlvBehaviourDictionary::RlvBehaviourDictionary()
 	addEntry(new RlvBehaviourProcessor<RLV_BHVR_CAMZOOMMIN, RlvBehaviourCamZoomMinMaxHandler>("camzoommin", RlvBehaviourInfo::BHVR_DEPRECATED));
 	addEntry(new RlvBehaviourProcessor<RLV_BHVR_CAMZOOMMAX, RlvBehaviourCamZoomMinMaxHandler>("camzoommax", RlvBehaviourInfo::BHVR_DEPRECATED));
 	addEntry(new RlvBehaviourGenericToggleProcessor<RLV_BHVR_SETCAM_UNLOCK, RLV_OPTION_NONE>("camunlock", RlvBehaviourInfo::BHVR_SYNONYM | RlvBehaviourInfo::BHVR_DEPRECATED));
+	// Camera (vision spheres)
+	addEntry(new RlvBehaviourGenericProcessor<RLV_OPTION_MODIFIER>("camdrawmin", RLV_BHVR_SETCAM_DRAWMIN, RlvBehaviourInfo::BHVR_EXPERIMENTAL));
+	addModifier(RLV_BHVR_SETCAM_DRAWMIN, RLV_MODIFIER_SETCAM_DRAWMIN, new RlvBehaviourModifier("Camera - Draw Distance (Min)", 0.0f, false, new RlvBehaviourModifierCompMax()));
+	addEntry(new RlvBehaviourGenericProcessor<RLV_OPTION_MODIFIER>("camdrawmax", RLV_BHVR_SETCAM_DRAWMAX, RlvBehaviourInfo::BHVR_EXPERIMENTAL));
+	addModifier(RLV_BHVR_SETCAM_DRAWMAX, RLV_MODIFIER_SETCAM_DRAWMAX, new RlvBehaviourModifier("Camera - Draw Distance (Max)", F32_MAX, false, new RlvBehaviourModifierCompMin));
+	addEntry(new RlvBehaviourGenericProcessor<RLV_OPTION_MODIFIER>("camdrawalphamin", RLV_BHVR_SETCAM_DRAWALPHAMIN, RlvBehaviourInfo::BHVR_EXPERIMENTAL));
+	addModifier(RLV_BHVR_SETCAM_DRAWALPHAMIN, RLV_MODIFIER_SETCAM_DRAWALPHAMIN, new RlvBehaviourModifier("Camera - Draw Alpha (Min)", 0.0f, false, new RlvBehaviourModifierCompMax()));
+	addEntry(new RlvBehaviourGenericProcessor<RLV_OPTION_MODIFIER>("camdrawalphamax", RLV_BHVR_SETCAM_DRAWALPHAMAX, RlvBehaviourInfo::BHVR_EXPERIMENTAL));
+	addModifier(RLV_BHVR_SETCAM_DRAWALPHAMAX, RLV_MODIFIER_SETCAM_DRAWALPHAMAX, new RlvBehaviourModifier("Camera - Draw Alpha (Max)", F32_MAX, false, new RlvBehaviourModifierCompMin));
+
+// TODO: implement camdrawcolor to be RLV 2.9 compliant 
+
 
 	// Overlay
 	addEntry(new RlvBehaviourGenericToggleProcessor<RLV_BHVR_SETOVERLAY, RLV_OPTION_NONE>("setoverlay", RlvBehaviourInfo::BHVR_EXPERIMENTAL));

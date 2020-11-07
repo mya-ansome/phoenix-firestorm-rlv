@@ -18,10 +18,20 @@
 #define RLV_HANDLER_H
 
 #include "llgroupmgr.h"
+#include "llrendersphere.h"
+#include "lltooldraganddrop.h"
+#include "llagent.h"
+#include "llagentcamera.h"
+
 #include <stack>
 
 #include "rlvcommon.h"
 #include "rlvhelper.h"
+#include "rlvmodifiers.h"
+#include "pipeline.h"
+
+#define EXTREMUM 1000000.f
+#define ALPHA_ALMOST_OPAQUE 0.99f
 
  // ============================================================================
  // Forward declarations
@@ -294,6 +304,13 @@ protected:
 	 */
 public:
 	const rlv_object_map_t& getObjectMap() const { return m_Objects; }
+
+public:
+	void drawSphere (LLVector3 center, F32 scale, LLColor3 color, F32 alpha);
+	void drawRenderLimit (BOOL force_opaque /*= FALSE*/);
+	LLJoint* getCamDistDrawFromJoint ();
+	LLJoint* mCamDistDrawFromJoint;
+	static bool sRenderLimitRenderedThisFrame;
 };
 
 typedef RlvHandler rlv_handler_t;

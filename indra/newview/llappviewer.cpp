@@ -1754,6 +1754,10 @@ bool LLAppViewer::doFrame()
 				pingMainloopTimeout("Main:Display");
 				gGLActive = TRUE;
 
+//MK
+					RlvHandler::sRenderLimitRenderedThisFrame = FALSE;
+//mk
+
 				display();
 
 				pingMainloopTimeout("Main:Snapshot");

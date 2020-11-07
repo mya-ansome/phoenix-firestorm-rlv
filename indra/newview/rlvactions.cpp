@@ -60,7 +60,8 @@ bool RlvActions::isCameraDistanceClamped()
 {
 	return
 		(gRlvHandler.hasBehaviour(RLV_BHVR_SETCAM_AVDISTMIN)) || (gRlvHandler.hasBehaviour(RLV_BHVR_SETCAM_AVDISTMAX)) ||
-		(gRlvHandler.hasBehaviour(RLV_BHVR_SETCAM_ORIGINDISTMIN)) || (gRlvHandler.hasBehaviour(RLV_BHVR_SETCAM_ORIGINDISTMAX));
+		(gRlvHandler.hasBehaviour(RLV_BHVR_SETCAM_ORIGINDISTMIN)) || (gRlvHandler.hasBehaviour(RLV_BHVR_SETCAM_ORIGINDISTMAX)) ||
+		(gRlvHandler.hasBehaviour(RLV_BHVR_SETCAM_DRAWMIN))||(gRlvHandler.hasBehaviour(RLV_BHVR_SETCAM_DRAWMAX));
 }
 
 bool RlvActions::isCameraFOVClamped()
@@ -78,13 +79,23 @@ bool RlvActions::isCameraPresetLocked()
 bool RlvActions::getCameraAvatarDistanceLimits(float& nDistMin, float& nDistMax)
 {
 	bool fDistMin = gRlvHandler.hasBehaviour(RLV_BHVR_SETCAM_AVDISTMIN), fDistMax = gRlvHandler.hasBehaviour(RLV_BHVR_SETCAM_AVDISTMAX);
-	if ( (fDistMin) || (fDistMax) )
+	bool fCamDistDrawMin = gRlvHandler.hasBehaviour(RLV_BHVR_SETCAM_DRAWMIN), fCamDistDrawMax = gRlvHandler.hasBehaviour(RLV_BHVR_SETCAM_DRAWMAX);
+	
+	if ( (fDistMin) || (fDistMax) || (fCamDistDrawMin) || (fCamDistDrawMax) )
 	{
 		static RlvCachedBehaviourModifier<float> sCamDistMin(RLV_MODIFIER_SETCAM_AVDISTMIN);
 		static RlvCachedBehaviourModifier<float> sCamDistMax(RLV_MODIFIER_SETCAM_AVDISTMAX);
 
+		static RlvCachedBehaviourModifier<float> mCamDistDrawMin(RLV_MODIFIER_SETCAM_DRAWMIN);
+		static RlvCachedBehaviourModifier<float> mCamDistDrawMax(RLV_MODIFIER_SETCAM_DRAWMAX);
+
 		nDistMax = (fDistMax) ? sCamDistMax : F32_MAX;
 		nDistMin = (fDistMin) ? sCamDistMin : 0.0;
+
+		if (fCamDistDrawMax)
+			if(mCamDistDrawMax < sCamDistMax)
+				nDistMax = 1+mCamDistDrawMax/40;
+
 		return true;
 	}
 	return false;

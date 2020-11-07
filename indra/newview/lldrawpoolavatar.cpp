@@ -54,6 +54,9 @@
 #include "llviewercontrol.h" // for gSavedSettings
 #include "llviewertexturelist.h"
 
+#include "rlvactions.h"
+#include "rlvhandler.h"
+
 // <FS:Zi> Add avatar hitbox debug
 #include "llviewercontrol.h"
 // (See *NOTE: in renderAvatars why this forward declatation is commented out)
@@ -1736,6 +1739,14 @@ void LLDrawPoolAvatar::renderAvatars(LLVOAvatar* single_avatar, S32 pass)
 
 	if (pass == 6)
 	{
+		//MK
+		// Draw a big black sphere around our avatar if the camera render is limited by RLV
+		if (RlvHandler::isEnabled() && avatarp == gAgentAvatarp)
+		{
+			RlvHandler::getInstance()->drawRenderLimit (FALSE);
+		}
+//mk
+
 		renderRiggedFullbrightShiny(avatarp);
 		return;
 	}
@@ -2225,7 +2236,36 @@ void LLDrawPoolAvatar::renderRigged(LLVOAvatar* avatar, U32 type, bool glow)
 
 	stop_glerror();
 
-	for (U32 i = 0; i < mRiggedFace[type].size(); ++i)
+//MK
+	// Calculate the position of the avatar here so we don't have to do it for each face
+	if (!gAgentAvatarp)
+	{
+		return;
+	}
+	//bool is_self = (avatar == gAgentAvatarp);
+
+	// Optimization : Rather than compare the distances for every face (which involves square roots, which are costly), we compare squared distances.
+	LLVector3 joint_pos = LLVector3::zero;
+	F32 cam_dist_draw_max_squared = EXTREMUM;
+	// We don't need to calculate all that stuff if the vision is not restricted.
+	if (RlvActions::isCameraDistanceClamped())
+	{
+		static RlvCachedBehaviourModifier<float> mCamDistDrawMax(RLV_MODIFIER_SETCAM_DRAWMAX);
+		joint_pos = RlvHandler::getInstance()->getCamDistDrawFromJoint()->getWorldPosition();
+		cam_dist_draw_max_squared = mCamDistDrawMax * mCamDistDrawMax;
+	}
+//mk
+
+
+
+
+
+//MK
+	// A little optimization, nothing much but why calculate size() of an array at every step along that very array?
+	////for (U32 i = 0; i < mRiggedFace[type].size(); ++i)
+	U32 size = mRiggedFace[type].size();
+	for (U32 i = 0; i < size; ++i)
+//mk
 	{
 		LLFace* face = mRiggedFace[type][i];
 

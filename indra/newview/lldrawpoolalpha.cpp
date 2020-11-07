@@ -49,6 +49,9 @@
 #include "llspatialpartition.h"
 #include "llglcommonfunc.h"
 
+#include "rlvactions.h"
+#include "rlvhandler.h"
+
 BOOL LLDrawPoolAlpha::sShowDebugAlpha = FALSE;
 
 static BOOL deferred_render = FALSE;
@@ -620,6 +623,21 @@ void LLDrawPoolAlpha::renderEmissives(U32 mask, std::vector<LLDrawInfo*>& emissi
 
 void LLDrawPoolAlpha::renderAlpha(U32 mask, S32 pass)
 {
+	//MK
+	// Calculate the position of the avatar here so we don't have to do it for each face
+	bool vision_restricted = (RlvHandler::isEnabled() && RlvActions::isCameraDistanceClamped());
+	// Optimization : Rather than compare the distances for every face (which involves square roots, which are costly), we compare squared distances.
+	LLVector3 joint_pos = LLVector3::zero;
+	F32 cam_dist_draw_max_squared = EXTREMUM;
+	// We don't need to calculate all that stuff if the vision is not restricted.
+	if (vision_restricted)
+	{
+		static RlvCachedBehaviourModifier<float> mCamDistDrawMin(RLV_MODIFIER_SETCAM_DRAWMIN);
+		joint_pos = RlvHandler::getInstance()->getCamDistDrawFromJoint()->getWorldPosition();
+		cam_dist_draw_max_squared = mCamDistDrawMin * mCamDistDrawMin;
+	}
+//mk
+
     // <FS:Ansariel> Tweak performance
     //BOOL batch_fullbrights = gSavedSettings.getBOOL("RenderAlphaBatchFullbrights");
     //BOOL batch_emissives   = gSavedSettings.getBOOL("RenderAlphaBatchEmissives");

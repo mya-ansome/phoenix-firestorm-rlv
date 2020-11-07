@@ -25,22 +25,27 @@
 //
 
 // Version of the specifcation we report
-const S32 RLV_VERSION_MAJOR = 3;
-const S32 RLV_VERSION_MINOR = 3;
-const S32 RLV_VERSION_PATCH = 3;
-const S32 RLV_VERSION_BUILD = 0;
+const S32 RLV_VERSION_MAJOR = 2;
+const S32 RLV_VERSION_MINOR = 9;
+const S32 RLV_VERSION_PATCH = 28;
+const S32 RLV_VERSION_BUILD = 2;
+
+// const S32 RLV_VERSION_MAJOR = 3;
+// const S32 RLV_VERSION_MINOR = 4;
+// const S32 RLV_VERSION_PATCH = 3;
+// const S32 RLV_VERSION_BUILD = 0;
 
 // Version of the specifcation we report (in compatibility mode)
 const S32 RLV_VERSION_MAJOR_COMPAT = 2;
-const S32 RLV_VERSION_MINOR_COMPAT = 8;
-const S32 RLV_VERSION_PATCH_COMPAT = 0;
-const S32 RLV_VERSION_BUILD_COMPAT = 0;
+const S32 RLV_VERSION_MINOR_COMPAT = 9;
+const S32 RLV_VERSION_PATCH_COMPAT = 28;
+const S32 RLV_VERSION_BUILD_COMPAT = 2;
 
 // Implementation version
 const S32 RLVa_VERSION_MAJOR = 2;
-const S32 RLVa_VERSION_MINOR = 3;
-const S32 RLVa_VERSION_PATCH = 0;
-const S32 RLVa_IMPL_ID = 13;
+const S32 RLVa_VERSION_MINOR = 9;
+const S32 RLVa_VERSION_PATCH = 28;
+const S32 RLVa_IMPL_ID = 14;
 
 // Uncomment before a final release
 #define RLV_RELEASE
@@ -230,8 +235,8 @@ enum ERlvBehaviour {
 	RLV_BHVR_SETCAM_TEXTURES,		// Replaces all textures with the specified texture (or the default unrezzed one)
 	RLV_BHVR_SETCAM_UNLOCK,			// Forces the camera focus to the user's avatar
 	// Camera (behaviours - deprecated)
-	RLV_BHVR_CAMZOOMMIN,			// Enforces a minimum - vertical - FOV angle of 60° / multiplier
-	RLV_BHVR_CAMZOOMMAX,			// Enforces a maximum - vertical - FOV angle of 60° / multiplier
+	RLV_BHVR_CAMZOOMMIN,			// Enforces a minimum - vertical - FOV angle of 60ï¿½ / multiplier
+	RLV_BHVR_CAMZOOMMAX,			// Enforces a maximum - vertical - FOV angle of 60ï¿½ / multiplier
 	// Camera (reply)
 	RLV_BHVR_GETCAM_AVDIST,			// Returns the current minimum distance between the camera and the user's avatar
 	RLV_BHVR_GETCAM_AVDISTMIN,		// Returns the active (if any) minimum distance between the camera and the user's avatar
@@ -242,6 +247,12 @@ enum ERlvBehaviour {
 	RLV_BHVR_GETCAM_TEXTURES,		// Returns the active (if any) replace texture UUID
 	// Camera (force)
 	RLV_BHVR_SETCAM_MODE,			// Switch the user's camera into the specified mode (e.g. mouselook or thirdview)
+	// Camera (vision spheres)
+	RLV_BHVR_SETCAM_DRAWMIN,		// camdrawmin
+	RLV_BHVR_SETCAM_DRAWMAX,		// camdrawmax
+	RLV_BHVR_SETCAM_DRAWALPHAMIN,	// camdrawalphamin
+	RLV_BHVR_SETCAM_DRAWALPHAMAX,	// camdrawalphamax
+
 
 	// Overlay
 	RLV_BHVR_SETOVERLAY,			// Gives an object exclusive control of the overlay
@@ -281,6 +292,12 @@ enum ERlvBehaviourModifier
 	RLV_MODIFIER_SETCAM_TEXTURE,		// Specifies the UUID of the texture used to texture the world view
 	RLV_MODIFIER_SITTPDIST,
 	RLV_MODIFIER_TPLOCALDIST,
+
+	// Camera (vision spheres)
+	RLV_MODIFIER_SETCAM_DRAWMIN,		// camdrawmin
+	RLV_MODIFIER_SETCAM_DRAWMAX,		// camdrawmax
+	RLV_MODIFIER_SETCAM_DRAWALPHAMIN,	// camdrawalphamin
+	RLV_MODIFIER_SETCAM_DRAWALPHAMAX,	// camdrawalphamax
 
 	RLV_MODIFIER_COUNT,
 	RLV_MODIFIER_UNKNOWN
