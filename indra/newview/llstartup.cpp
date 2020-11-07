@@ -1327,7 +1327,7 @@ bool idle_startup()
 		}
 
 // [RLVa:KB] - Checked: RLVa-0.2.1
-		if (gSavedSettings.get<bool>(RlvSettingNames::Main))
+		// if (gSavedSettings.get<bool>(RlvSettingNames::Main))
 		{
 			RlvHandler::setEnabled(true);
 		}

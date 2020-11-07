@@ -3415,7 +3415,7 @@ bool LLAppViewer::initConfiguration()
 		if ( (pControl->getValue().asBoolean()) && (pControl->hasUnsavedValue()) )
 		{
 			pControl->resetToDefault();
-			pControl->setValue(false);
+			pControl->setValue(true);
 
 			std::ostringstream msg;
 			msg << LLTrans::getString("RLVaToggleMessageLogin", LLSD().with("[STATE]", LLTrans::getString("RLVaToggleDisabled")));
