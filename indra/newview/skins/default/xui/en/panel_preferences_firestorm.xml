@@ -46,6 +46,8 @@
      name="tab-extras" >
         <check_box
          control_name="RestrainedLove"
+         initial_value="true"
+         enabled="false"
          layout="topleft"
          follows="left|top"
          top_pad="6"
