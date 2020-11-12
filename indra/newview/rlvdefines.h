@@ -252,6 +252,7 @@ enum ERlvBehaviour {
 	RLV_BHVR_SETCAM_DRAWMAX,		// camdrawmax
 	RLV_BHVR_SETCAM_DRAWALPHAMIN,	// camdrawalphamin
 	RLV_BHVR_SETCAM_DRAWALPHAMAX,	// camdrawalphamax
+	RLV_BHVR_SETCAM_DRAW_COLOR,		// camdrawcolor
 
 
 	// Overlay
@@ -298,6 +299,7 @@ enum ERlvBehaviourModifier
 	RLV_MODIFIER_SETCAM_DRAWMAX,		// camdrawmax
 	RLV_MODIFIER_SETCAM_DRAWALPHAMIN,	// camdrawalphamin
 	RLV_MODIFIER_SETCAM_DRAWALPHAMAX,	// camdrawalphamax
+	RLV_MODIFIER_SETCAM_DRAW_COLOR,		// camdrawcolor
 
 	RLV_MODIFIER_COUNT,
 	RLV_MODIFIER_UNKNOWN

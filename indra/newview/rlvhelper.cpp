@@ -20,6 +20,7 @@
 #include "llgesturemgr.h"
 #include "llnotificationsutil.h"
 #include "llviewerobjectlist.h"
+#include "v3color.h"
 
 //<FS:TS> FIRE-4453 bridge detached by the RLV command @remattach=force
 #include "fslslbridge.h"
@@ -223,11 +224,11 @@ RlvBehaviourDictionary::RlvBehaviourDictionary()
 	addEntry(new RlvBehaviourGenericProcessor<RLV_OPTION_MODIFIER>("camdrawmax", RLV_BHVR_SETCAM_DRAWMAX, RlvBehaviourInfo::BHVR_EXPERIMENTAL));
 	addModifier(RLV_BHVR_SETCAM_DRAWMAX, RLV_MODIFIER_SETCAM_DRAWMAX, new RlvBehaviourModifier("Camera - Draw Distance (Max)", F32_MAX, false, new RlvBehaviourModifierCompMin));
 	addEntry(new RlvBehaviourGenericProcessor<RLV_OPTION_MODIFIER>("camdrawalphamin", RLV_BHVR_SETCAM_DRAWALPHAMIN, RlvBehaviourInfo::BHVR_EXPERIMENTAL));
-	addModifier(RLV_BHVR_SETCAM_DRAWALPHAMIN, RLV_MODIFIER_SETCAM_DRAWALPHAMIN, new RlvBehaviourModifier("Camera - Draw Alpha (Min)", 0.0f, false, new RlvBehaviourModifierCompMax()));
+	addModifier(RLV_BHVR_SETCAM_DRAWALPHAMIN, RLV_MODIFIER_SETCAM_DRAWALPHAMIN, new RlvBehaviourModifier("Camera - Draw Distance Alpha (Min)", 0.0f, false, new RlvBehaviourModifierCompMax()));
 	addEntry(new RlvBehaviourGenericProcessor<RLV_OPTION_MODIFIER>("camdrawalphamax", RLV_BHVR_SETCAM_DRAWALPHAMAX, RlvBehaviourInfo::BHVR_EXPERIMENTAL));
-	addModifier(RLV_BHVR_SETCAM_DRAWALPHAMAX, RLV_MODIFIER_SETCAM_DRAWALPHAMAX, new RlvBehaviourModifier("Camera - Draw Alpha (Max)", F32_MAX, false, new RlvBehaviourModifierCompMin));
-
-// TODO: implement camdrawcolor to be RLV 2.9 compliant 
+	addModifier(RLV_BHVR_SETCAM_DRAWALPHAMAX, RLV_MODIFIER_SETCAM_DRAWALPHAMAX, new RlvBehaviourModifier("Camera - Draw Distance Alpha (Max)", F32_MAX, false, new RlvBehaviourModifierCompMin));
+	addEntry(new RlvBehaviourGenericProcessor<RLV_OPTION_MODIFIER>("camdrawcolor", RLV_BHVR_SETCAM_DRAW_COLOR, RlvBehaviourInfo::BHVR_EXPERIMENTAL));
+	addModifier(RLV_BHVR_SETCAM_DRAW_COLOR, RLV_MODIFIER_SETCAM_DRAW_COLOR, new RlvBehaviourModifier("Camera - Draw Distance Alpha Color", LLColor3::black, false, new RlvBehaviourModifierCompMin));
 
 
 	// Overlay
@@ -609,6 +610,15 @@ bool RlvBehaviourModifier::convertOptionValue(const std::string& optionValue, Rl
 				return true;
 			}
 		}
+		else if (typeid(LLColor3) == m_DefaultValue.type())
+		{
+			LLColor3 colOption;
+			if (3 == sscanf(optionValue.c_str(), "%f;%f;%f", colOption.mV + 0, colOption.mV + 1, colOption.mV + 2))
+			{
+				modValue = colOption;
+				return true;
+			}
+		}
 		else if (typeid(LLUUID) == m_DefaultValue.type())
 		{
 			LLUUID idOption;
@@ -833,7 +843,7 @@ bool RlvCommandOptionHelper::parseOption<LLColor3>(const std::string& strOption,
 {
 	if (!strOption.empty())
 	{
-		S32 cntToken = sscanf(strOption.c_str(), "%f/%f/%f", clrOption.mV + 0, clrOption.mV + 1, clrOption.mV + 2);
+		S32 cntToken = sscanf(strOption.c_str(), "%f;%f;%f", clrOption.mV + 0, clrOption.mV + 1, clrOption.mV + 2);
 		return (3 == cntToken);
 	}
 	return false;
@@ -843,7 +853,7 @@ template<>
 bool RlvCommandOptionHelper::parseOption<RlvCommandOptionGeneric>(const std::string& strOption, RlvCommandOptionGeneric& genericOption)
 {
 	LLWearableType::EType wtType(LLWearableType::WT_INVALID); LLUUID idOption; ERlvAttachGroupType eAttachGroup(RLV_ATTACHGROUP_INVALID);
-	LLViewerJointAttachment* pAttachPt = NULL; LLViewerInventoryCategory* pFolder = NULL; LLVector3d posOption; float nOption;
+	LLViewerJointAttachment* pAttachPt = NULL; LLViewerInventoryCategory* pFolder = NULL; LLVector3d posOption; LLColor3 colOption; float nOption;
 
 	if (!strOption.empty())																		// <option> could be an empty string
 	{
@@ -859,6 +869,8 @@ bool RlvCommandOptionHelper::parseOption<RlvCommandOptionGeneric>(const std::str
 			genericOption = eAttachGroup;														// ... or specify an attachment point group
 		else if (RlvCommandOptionHelper::parseOption(strOption, posOption))
 			genericOption = posOption;															// ... or specify a vector (region or global coordinates)
+		else if (RlvCommandOptionHelper::parseOption(strOption, colOption))
+			genericOption = colOption;															// ... or specify a color
 		else if (RlvCommandOptionHelper::parseOption(strOption, nOption))
 			genericOption = nOption;															// ... or specify a number
 		else

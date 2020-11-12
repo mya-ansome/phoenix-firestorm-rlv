@@ -3977,8 +3977,8 @@ void RlvHandler::drawRenderLimit (BOOL force_opaque /*= FALSE*/)
 	static RlvCachedBehaviourModifier<float> mCamDistDrawMax(RLV_MODIFIER_SETCAM_DRAWMAX);
 	static RlvCachedBehaviourModifier<float> mCamDistDrawAlphaMin(RLV_MODIFIER_SETCAM_DRAWALPHAMIN);
 	static RlvCachedBehaviourModifier<float> mCamDistDrawAlphaMax(RLV_MODIFIER_SETCAM_DRAWALPHAMAX);
-
-	LLColor3 mCamDistDrawColor(0.0f, 0.0f, 0.0f);
+	static RlvCachedBehaviourModifier<LLColor3> mCamDistDrawColor(RLV_MODIFIER_SETCAM_DRAW_COLOR);
+	
 	int mCamDistNbGradients = 40;
 
 	gGL.setColorMask(true, false);

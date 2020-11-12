@@ -360,6 +360,7 @@ struct RlvCommandOptionGeneric
 	bool isUUID() const                 { return (!isEmpty()) && (typeid(LLUUID) == m_varOption.type()); }
 	bool isVector() const               { return (!isEmpty()) && (typeid(LLVector3d) == m_varOption.type()); }
 	bool isWearableType() const         { return (!isEmpty()) && (typeid(LLWearableType::EType) == m_varOption.type()); }
+	bool isColor() const                { return (!isEmpty()) && (typeid(LLColor3) == m_varOption.type()); }
 
 	LLViewerJointAttachment*   getAttachmentPoint() const { return (isAttachmentPoint()) ? boost::get<LLViewerJointAttachment*>(m_varOption) : NULL; }
 	ERlvAttachGroupType        getAttachmentPointGroup() const { return (isAttachmentPointGroup()) ? boost::get<ERlvAttachGroupType>(m_varOption) : RLV_ATTACHGROUP_INVALID; }
@@ -368,9 +369,10 @@ struct RlvCommandOptionGeneric
 	const std::string&         getString() const { return (isString()) ? boost::get<std::string>(m_varOption) : LLStringUtil::null; }
 	const LLUUID&              getUUID() const { return (isUUID()) ? boost::get<LLUUID>(m_varOption) : LLUUID::null; }
 	const LLVector3d&          getVector() const { return (isVector()) ? boost::get<LLVector3d>(m_varOption) : LLVector3d::zero; }
+	const LLColor3&            getColor() const { return (isColor()) ? boost::get<LLColor3>(m_varOption) : LLColor3::black; }
 	LLWearableType::EType      getWearableType() const { return (isWearableType()) ? boost::get<LLWearableType::EType>(m_varOption) : LLWearableType::WT_INVALID; }
 
-	typedef boost::variant<boost::blank, LLViewerJointAttachment*, ERlvAttachGroupType, LLViewerInventoryCategory*, std::string, LLUUID, LLWearableType::EType, LLVector3d, float> rlv_option_generic_t;
+	typedef boost::variant<boost::blank, LLViewerJointAttachment*, ERlvAttachGroupType, LLViewerInventoryCategory*, std::string, LLUUID, LLWearableType::EType, LLVector3d, LLColor3, float> rlv_option_generic_t;
 	void operator=(const rlv_option_generic_t& optionValue) { m_varOption = optionValue; }
 protected:
 	rlv_option_generic_t m_varOption;

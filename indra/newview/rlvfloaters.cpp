@@ -393,8 +393,11 @@ void RlvFloaterBehaviours::refreshAll()
 					sdModifierColumns[1]["value"] = llformat("%d", boost::get<int>(modValue));
 				else if (typeid(bool) == modValue.type())
 					sdModifierColumns[1]["value"] = (boost::get<bool>(modValue)) ? "true" : "false";
+				else if (typeid(LLColor3) == modValue.type())
+					sdModifierColumns[1]["value"] = llformat("%f;%f;%f", boost::get<LLColor3>(modValue).mV[0], boost::get<LLColor3>(modValue).mV[1], boost::get<LLColor3>(modValue).mV[2]);
 				else if (typeid(LLUUID) == modValue.type())
 					sdModifierColumns[1]["value"] = boost::get<LLUUID>(modValue).asString();
+
 			}
 			else
 			{
