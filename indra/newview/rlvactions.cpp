@@ -93,8 +93,8 @@ bool RlvActions::getCameraAvatarDistanceLimits(float& nDistMin, float& nDistMax)
 		nDistMin = (fDistMin) ? sCamDistMin : 0.0;
 
 		if (fCamDistDrawMax)
-			if(mCamDistDrawMax < sCamDistMax)
-				nDistMax = 1+mCamDistDrawMax/40;
+			if((mCamDistDrawMin*.75) < sCamDistMax)
+				nDistMax = (mCamDistDrawMin*.75);
 
 		return true;
 	}
