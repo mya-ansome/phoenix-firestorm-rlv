@@ -220,7 +220,7 @@ RlvBehaviourDictionary::RlvBehaviourDictionary()
 	addEntry(new RlvBehaviourGenericToggleProcessor<RLV_BHVR_SETCAM_UNLOCK, RLV_OPTION_NONE>("camunlock", RlvBehaviourInfo::BHVR_SYNONYM | RlvBehaviourInfo::BHVR_DEPRECATED));
 	// Camera (vision spheres)
 	addEntry(new RlvBehaviourGenericProcessor<RLV_OPTION_MODIFIER>("camdrawmin", RLV_BHVR_SETCAM_DRAWMIN, RlvBehaviourInfo::BHVR_EXPERIMENTAL));
-	addModifier(RLV_BHVR_SETCAM_DRAWMIN, RLV_MODIFIER_SETCAM_DRAWMIN, new RlvBehaviourModifier("Camera - Draw Distance (Min)", 0.0f, false, new RlvBehaviourModifierCompMax()));
+	addModifier(RLV_BHVR_SETCAM_DRAWMIN, RLV_MODIFIER_SETCAM_DRAWMIN, new RlvBehaviourModifier("Camera - Draw Distance (Min)", 1.0f, false, new RlvBehaviourModifierCompMax()));
 	addEntry(new RlvBehaviourGenericProcessor<RLV_OPTION_MODIFIER>("camdrawmax", RLV_BHVR_SETCAM_DRAWMAX, RlvBehaviourInfo::BHVR_EXPERIMENTAL));
 	addModifier(RLV_BHVR_SETCAM_DRAWMAX, RLV_MODIFIER_SETCAM_DRAWMAX, new RlvBehaviourModifier("Camera - Draw Distance (Max)", F32_MAX, false, new RlvBehaviourModifierCompMin));
 	addEntry(new RlvBehaviourGenericProcessor<RLV_OPTION_MODIFIER>("camdrawalphamin", RLV_BHVR_SETCAM_DRAWALPHAMIN, RlvBehaviourInfo::BHVR_EXPERIMENTAL));
