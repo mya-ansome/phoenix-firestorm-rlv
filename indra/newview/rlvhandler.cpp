@@ -2520,7 +2520,7 @@ void RlvBehaviourToggleHandler<RLV_BHVR_SHOWINV>::onCommandToggle(ERlvBehaviour 
 template<> template<>
 void RlvBehaviourToggleHandler<RLV_BHVR_SHOWNAMES>::onCommandToggle(ERlvBehaviour eBhvr, bool fHasBhvr)
 {
-	if (LLApp::isExiting())
+	if (LLApp::isExiting() || gDoDisconnect)
 		return;	// Nothing to do if the viewer is shutting down
 
 	// Update the shownames context
@@ -2532,10 +2532,10 @@ void RlvBehaviourToggleHandler<RLV_BHVR_SHOWNAMES>::onCommandToggle(ERlvBehaviou
 	//RLV_ASSERT( (pPeoplePanel) && (pPeoplePanel->getNearbyList()) );
 	//if ( (pPeoplePanel) && (pPeoplePanel->getNearbyList()) )
 	//	pPeoplePanel->getNearbyList()->updateAvatarNames();
-	FSRadar* pRadar = FSRadar::getInstance();
-	RLV_ASSERT( (pRadar) );
-	if ( (pRadar) )
-		pRadar->updateNames();
+	if (FSRadar::instanceExists())
+	{
+		FSRadar::instance().updateNames();
+	}
 	// </FS:Ansariel> [Standalone radar]
 
 	// Refresh the speaker list

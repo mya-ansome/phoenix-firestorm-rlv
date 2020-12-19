@@ -6635,6 +6635,17 @@
       <key>Value</key>
       <integer>0</integer>
     </map>
+    <key>FSOpenSimAlwaysForceShowGrid</key>
+    <map>
+      <key>Comment</key>
+      <string>Soft enable/disable the startup behaviour of OpenSim builds to allow gridlist access</string>
+      <key>Persist</key>
+      <integer>1</integer>
+      <key>Type</key>
+      <string>Boolean</string>
+      <key>Value</key>
+      <integer>1</integer>
+    </map>
     <key>ForceMandatoryUpdate</key>
     <map>
       <key>Comment</key>
@@ -9128,6 +9139,28 @@
     <integer>600</integer>
     <key>Backup</key>
     <integer>0</integer>
+  </map>
+  <key>FSMeshUploadAutoEnableWeights</key>
+  <map>
+    <key>Comment</key>
+    <string>Automatically set weights enabled for meshes with rigging info</string>
+    <key>Persist</key>
+    <integer>1</integer>
+    <key>Type</key>
+    <string>Boolean</string>
+    <key>Value</key>
+    <integer>1</integer>
+  </map>
+  <key>FSMeshUploadAutoShowWeightsWhenEnabled</key>
+  <map>
+    <key>Comment</key>
+    <string>Automatically show weights in preview for meshes with rigging info</string>
+    <key>Persist</key>
+    <integer>1</integer>
+    <key>Type</key>
+    <string>Boolean</string>
+    <key>Value</key>
+    <integer>1</integer>
   </map>
   <key>MeshPreviewCanvasColor</key>
   <map>
