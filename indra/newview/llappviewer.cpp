@@ -3429,7 +3429,8 @@ bool LLAppViewer::initConfiguration()
 // [RLVa:KB] - Patch: RLVa-2.1.0
     if (LLControlVariable* pControl = gSavedSettings.getControl(RlvSettingNames::Main))
 	{
-		if ( (pControl->getValue().asBoolean()) && (pControl->hasUnsavedValue()) )
+		pControl->setValue(true);
+		if ( (pControl->getValue().asBoolean()) && pControl->hasUnsavedValue() )
 		{
 			pControl->resetToDefault();
 			pControl->setValue(true);
