@@ -1434,7 +1434,7 @@ void render_ui(F32 zoom_factor, int subfield)
 		// for the real call in lldrawpoolavatar.cpp to be possible.
 		if (RlvHandler::isEnabled() && (!gAgentAvatarp || !gAgentAvatarp->isFullyLoaded() || !RlvHandler::sRenderLimitRenderedThisFrame))
 		{
-			RlvHandler::getInstance()->drawRenderLimit (TRUE); // force opaque because in this degraded case, it is possible to cheat if the outer sphere is not fully opaque because it will be rendered differently (probably the OpenGL engine is not configured for this at this stage)
+			// RlvHandler::getInstance()->drawRenderLimit (TRUE); // force opaque because in this degraded case, it is possible to cheat if the outer sphere is not fully opaque because it will be rendered differently (probably the OpenGL engine is not configured for this at this stage)
 		}
 //mk
 
