@@ -258,7 +258,11 @@ std::string LLInvFVBridge::getSearchableCreatorName() const
 		if(item)
 		{
 			LLAvatarName av_name;
-			if (LLAvatarNameCache::get(item->getCreatorUUID(), &av_name))
+			// <FS:Beq> Avoid null id requests entering name cache
+			// if (LLAvatarNameCache::get(item->getCreatorUUID(), &av_name))
+			const auto& creatorId {item->getCreatorUUID()};
+			if ( creatorId.notNull() && LLAvatarNameCache::get(creatorId, &av_name) )
+			// </FS:Beq>
 			{
 				std::string username = av_name.getUserName();
 				LLStringUtil::toUpper(username);
@@ -3844,7 +3848,12 @@ LLFolderType::EType LLFolderBridge::getPreferredType() const
 	LLViewerInventoryCategory* cat = getCategory();
 	if(cat)
 	{
-		// <FS:Ansariel> Special virtual system folder icons
+		// <FS:Ansariel> Special virtual system folder icons; Since these folders can be user-created
+		//               and not protected, we will assign the folder type here instead of in
+		//               LLFolderDictionary. By latter and not declaring them as protected so the user
+		//               could delete them if they desire, they would not show up within the list of
+		//               protected folders in inventory, by underneath them among the other normal
+		//               folders, which is not desired.
 		//preferred_type = cat->getPreferredType();
 		std::string catName(cat->getName());
 		if (catName == ROOT_FIRESTORM_FOLDER) preferred_type = LLFolderType::FT_FIRESTORM;
@@ -4387,7 +4396,9 @@ void LLFolderBridge::buildContextMenuOptions(U32 flags, menuentry_vec_t&   items
 	}
 	// </FS:Ansariel>
 	// <FS:Ansariel> Fix "outfits" context menu
-	if (outfits_id == mUUID)
+	if (model->isObjectDescendentOf(mUUID, outfits_id) && getCategory() &&
+		(getCategory()->getPreferredType() == LLFolderType::FT_NONE || 
+		 getCategory()->getPreferredType() == LLFolderType::FT_MY_OUTFITS))
 	{
 		items.push_back(std::string("New Outfit"));
 	}
@@ -4493,17 +4504,17 @@ void LLFolderBridge::buildContextMenuOptions(U32 flags, menuentry_vec_t&   items
 		// Not sure what the right thing is to do here.
 		if (!isCOFFolder() && cat && (cat->getPreferredType() != LLFolderType::FT_OUTFIT))
 		{
-			// <FS:Ansariel> Fix "outfits" context menu
-			//if (!isInboxFolder()) // don't allow creation in inbox
-			if (!isInboxFolder() && outfits_id != mUUID) // don't allow creation in inbox
-			// </FS:Ansariel>
+			if (!isInboxFolder()) // don't allow creation in inbox
 			{
 				// Do not allow to create 2-level subfolder in the Calling Card/Friends folder. EXT-694.
 				if (!LLFriendCardsManager::instance().isCategoryInFriendFolder(cat))
 				{
 					items.push_back(std::string("New Folder"));
 				}
-                if (!isMarketplaceListingsFolder())
+                // <FS:Ansariel> Fix "outfits" context menu
+                //if (!isMarketplaceListingsFolder())
+                if (!isMarketplaceListingsFolder() && !model->isObjectDescendentOf(mUUID, outfits_id))
+                // </FS:Ansariel>
                 {
                     items.push_back(std::string("New Script"));
                     items.push_back(std::string("New Note"));
@@ -7806,7 +7817,9 @@ void LLSettingsBridge::performAction(LLInventoryModel* model, std::string action
         if (!item) 
             return;
         LLUUID asset_id = item->getAssetUUID();
-        LLEnvironment::instance().setEnvironment(LLEnvironment::ENV_LOCAL, asset_id);
+        // FIRE-30701 - Allow crossfade time to apply when using EEP from inventory.
+        // LLEnvironment::instance().setEnvironment(LLEnvironment::ENV_LOCAL, asset_id);
+        LLEnvironment::instance().setManualEnvironment(LLEnvironment::ENV_LOCAL, asset_id);
         LLEnvironment::instance().setSelectedEnvironment(LLEnvironment::ENV_LOCAL);
     }
     else if ("apply_settings_parcel" == action)
@@ -8448,11 +8461,11 @@ void LLFolderViewGroupedItemBridge::groupFilterContextMenu(folder_view_item_dequ
 	disable_context_entries_if_present(menu, disabled_items);
 }
 
-bool LLFolderViewGroupedItemBridge::canWearSelected(uuid_vec_t item_ids)
+bool LLFolderViewGroupedItemBridge::canWearSelected(const uuid_vec_t& item_ids) const
 {
 	for (uuid_vec_t::const_iterator it = item_ids.begin(); it != item_ids.end(); ++it)
 	{
-		LLViewerInventoryItem* item = gInventory.getItem(*it);
+		const LLViewerInventoryItem* item = gInventory.getItem(*it);
 		// <FS:Ansariel> Fix broken add wearable check
 		//if (!item || (item->getType() >= LLAssetType::AT_COUNT) || (item->getType() <= LLAssetType::AT_NONE))
 		if (!item || (item->getType() != LLAssetType::AT_CLOTHING && item->getType() != LLAssetType::AT_OBJECT && item->getType() != LLAssetType::AT_BODYPART && item->getType() != LLAssetType::AT_GESTURE))

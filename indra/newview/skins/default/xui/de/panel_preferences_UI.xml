@@ -104,6 +104,20 @@
 		<check_box label="Menüsuche anzeigen" name="show_search_menu_check"/>
 		<check_box label="Kontostand anzeigen" name="FSShowCurrencyBalanceInStatusbar"/>
 		<check_box label="Popup-Fenster beim Überfahren der Icons mit der Maus in der Menüleiste aktivieren" name="FSStatusBarMenuButtonPopupOnRollover"/>
+		<text name="statusbar_timeformat_textbox">
+			Zeitformat:
+		</text>
+		<combo_box name="FSStatusBarTimeFormat" tool_tip="Bestimmt das Zeitformat, das in der Menüleiste verwendet wird.">
+			<combo_box.item label="Standard ausgewählter Sprache" name="Language"/>
+			<combo_box.item label="12 Stunden" name="12_Hour"/>
+			<combo_box.item label="12 Stunden inkl. Sekunden" name="12_Hour_Seconds"/>
+			<combo_box.item label="12 Stunden inkl. Zeitzone" name="12_Hour_TZ"/>
+			<combo_box.item label="12 Stunden inkl. Sekunden &amp; Zeitzone" name="12_Hour_TZ_Seconds"/>
+			<combo_box.item label="24 Stunden" name="24_Hour"/>
+			<combo_box.item label="24 Stunden inkl. Sekunden" name="24_Hour_Seconds"/>
+			<combo_box.item label="24 Stunden inkl. Zeitzone" name="24_Hour_TZ"/>
+			<combo_box.item label="24 Stunden inkl. Sekunden &amp; Zeitzone" name="24_Hour_TZ_Seconds"/>
+		</combo_box>
 		<text name="navfav_textbox">
 			Navigations- und Favoriten-Leiste:
 		</text>
@@ -119,6 +133,7 @@
 		<check_box label="Deaktiviere automatisches Öffnen der Blockierliste" name="FSDisableBlockListAutoOpen" tool_tip="Deaktiviert das automatische Öffnen der Blockierliste, wenn Avatare oder Objekte geblockt werden."/>
 		<check_box label="„Freunde“ und „Gruppen“ im Menü „Unterhalten“ öffnen die [SHORT_VIEWER_GENERATION]-Version" name="FSUseV2Friends" tool_tip="Falls aktiviert, werden Freunde bzw. Gruppen im „Leute“-Fenster geöffnet - ansonsten im Fenster „Kontakte“."/>
 		<check_box label="Ursprüngliche Version des Objekteigenschaften-Fensters verwenden" name="FSUseLegacyObjectProperties" tool_tip="Falls aktiviert, wird die ursprüngliche Version im Viewer-1-Stil des Eigenschaften-Fensters für Objekte verwendet."/>
+		<check_box label="Kleineres Fenster für Kamerasteuerung verwenden" name="FSUseSmallCameraFloater" tool_tip="Falls aktiviert, wird die ursprüngliche, kleinere Version des Fensters für die Kamerasteuerung ohne die Kontrollen für die Kamera-Voreinstellungen verwendet."/>
 		<text name="standalone_textbox">
 			Eigene Fenster verwenden für:
 		</text>

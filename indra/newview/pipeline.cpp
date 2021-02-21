@@ -115,6 +115,7 @@
 #include "llprogressview.h"
 #include "llcleanup.h"
 // [RLVa:KB] - Checked: RLVa-2.0.0
+#include "llvisualeffect.h"
 #include "rlvactions.h"
 #include "rlvlocks.h"
 // [/RLVa:KB]
@@ -185,6 +186,10 @@ bool LLPipeline::RenderDepthOfFieldInEditMode;
 //<FS:TS> FIRE-16251: Depth of field does not work underwater
 bool LLPipeline::FSRenderDepthOfFieldUnderwater;
 //</FS:TS> FIRE-16251
+// <FS:Beq> FIRE-16728 Add free aim mouse and focus lock
+bool LLPipeline::FSFocusPointLocked;
+bool LLPipeline::FSFocusPointFollowsPointer;
+// </FS:Beq>
 F32 LLPipeline::CameraFocusTransitionTime;
 F32 LLPipeline::CameraFNumber;
 F32 LLPipeline::CameraFocalLength;
@@ -372,6 +377,9 @@ bool	LLPipeline::sRenderParticles; // <FS:LO> flag to hold correct, user selecte
 // [SL:KB] - Patch: Render-TextureToggle (Catznip-4.0)
 bool	LLPipeline::sRenderTextures = true;
 // [/SL:KB]
+// [RLVa:KB] - @setsphere
+bool	LLPipeline::sUseDepthTexture = false;
+// [/RLVa:KB]
 
 // EventHost API LLPipeline listener.
 static LLPipelineListener sPipelineListener;
@@ -658,6 +666,10 @@ void LLPipeline::init()
 	connectRefreshCachedSettingsSafe("RenderAttachedLights");
 	connectRefreshCachedSettingsSafe("RenderAttachedParticles");
 	// </FS:Ansariel>
+    // <FS:Beq> FIRE-16728 Add free aim mouse and focus lock
+	connectRefreshCachedSettingsSafe("FSFocusPointLocked");
+	connectRefreshCachedSettingsSafe("FSFocusPointFollowsPointer");
+    // </FS:Beq>
 }
 
 LLPipeline::~LLPipeline()
@@ -1047,8 +1059,22 @@ bool LLPipeline::allocateScreenBuffer(U32 resX, U32 resY, U32 samples)
 		mFXAABuffer.release();
 		mScreen.release();
 		mDeferredScreen.release(); //make sure to release any render targets that share a depth buffer with mDeferredScreen first
-		mDeferredDepth.release();
-		mOcclusionDepth.release();
+// [RLVa:KB] - @setsphere
+		if (!LLRenderTarget::sUseFBO || !LLPipeline::sUseDepthTexture)
+		{
+			mDeferredDepth.release();
+			mOcclusionDepth.release();
+		}
+		else
+		{
+			const U32 occlusion_divisor = 3;
+			if (!mDeferredDepth.allocate(resX, resY, 0, TRUE, FALSE, LLTexUnit::TT_RECT_TEXTURE, FALSE, samples)) return false;
+			if (!mOcclusionDepth.allocate(resX / occlusion_divisor, resY / occlusion_divisor, 0, TRUE, FALSE, LLTexUnit::TT_RECT_TEXTURE, FALSE, samples)) return false;
+			if (RlvActions::isRlvEnabled() && !mDeferredLight.allocate(resX, resY, GL_RGBA, FALSE, FALSE, LLTexUnit::TT_RECT_TEXTURE, FALSE)) return false;
+		}
+// [/RLVa:KB]
+//        mDeferredDepth.release();
+//        mOcclusionDepth.release();
 						
 		if (!mScreen.allocate(resX, resY, GL_RGBA, TRUE, TRUE, LLTexUnit::TT_RECT_TEXTURE, FALSE)) return false;		
 	}
@@ -1230,6 +1256,10 @@ void LLPipeline::refreshCachedSettings()
 	//<FS:TS> FIRE-16251: Depth of Field does not work underwater
 	FSRenderDepthOfFieldUnderwater = gSavedSettings.getBOOL("FSRenderDoFUnderwater");
 	//</FS:TS> FIRE-16251
+	// <FS:Beq> FIRE-16728 Add free aim mouse and focus lock
+	FSFocusPointLocked = gSavedSettings.getBOOL("FSFocusPointLocked");
+	FSFocusPointFollowsPointer = gSavedSettings.getBOOL("FSFocusPointFollowsPointer");
+	// </FS:Beq>    
 	CameraFocusTransitionTime = gSavedSettings.getF32("CameraFocusTransitionTime");
 	CameraFNumber = gSavedSettings.getF32("CameraFNumber");
 	CameraFocalLength = gSavedSettings.getF32("CameraFocalLength");
@@ -4579,7 +4609,17 @@ void LLPipeline::renderGeom(LLCamera& camera, bool forceVBOUpdate)
 				gGLLastMatrix = NULL;
 				gGL.loadMatrix(gGLModelView);
 				LLGLSLShader::bindNoShader();
-				doOcclusion(camera);
+// [RLVa:KB] - @setsphere
+				if (LLPipeline::RenderDeferred || !LLRenderTarget::sUseFBO || !LLPipeline::sUseDepthTexture)
+				{
+					doOcclusion(camera);
+				}
+				else
+				{
+					doOcclusion(camera, mScreen, mOcclusionDepth, &mDeferredDepth);
+				}
+// [/RLVa:KB]
+//				doOcclusion(camera);
 			}
 
 			pool_set_t::iterator iter2 = iter1;
@@ -7886,6 +7926,9 @@ void LLPipeline::renderFinalize()
 
     LLVertexBuffer::unbind();
 
+// [RLVa:KB] - @setsphere
+	LLRenderTarget* pRenderBuffer = (RlvActions::hasBehaviour(RLV_BHVR_SETSPHERE)) ? &mDeferredLight : nullptr;
+// [/RLVa:KB]
     if (LLPipeline::sRenderDeferred)
     {
 
@@ -7898,6 +7941,12 @@ void LLPipeline::renderFinalize()
 
         bool multisample = RenderFSAASamples > 1 && mFXAABuffer.isComplete();
         exoPostProcess::instance().multisample = multisample;	// <FS:CR> Import Vignette from Exodus
+// [RLVa:KB] - @setsphere
+		if (multisample && !pRenderBuffer)
+		{
+			pRenderBuffer = &mDeferredLight;
+		}
+// [/RLVa:KB]
 
         gViewerWindow->setup3DViewport();
 
@@ -7913,6 +7962,15 @@ void LLPipeline::renderFinalize()
 
             LLVector3 focus_point;
 
+            // <FS:Beq> FIRE-16728 focus point lock & free focus DoF - based on a feature developed by NiranV Dean
+            static LLVector3 last_focus_point{};
+            if( LLPipeline::FSFocusPointLocked && !last_focus_point.isExactlyZero() )
+            {
+                focus_point = last_focus_point;
+            }
+            else
+            {
+            // </FS:Beq>
             LLViewerObject *obj = LLViewerMediaFocus::getInstance()->getFocusedObject();
             if (obj && obj->mDrawable && obj->isSelected())
             { // focus on selected media object
@@ -7926,10 +7984,11 @@ void LLPipeline::renderFinalize()
                     }
                 }
             }
+            }// <FS:Beq/> support focus point lock
 
             if (focus_point.isExactlyZero())
             {
-                if (LLViewerJoystick::getInstance()->getOverrideCamera())
+                if (LLViewerJoystick::getInstance()->getOverrideCamera() || LLPipeline::FSFocusPointFollowsPointer) // <FS:Beq/> FIRE-16728 Add free aim mouse and focus lock
                 { // focus on point under cursor
                     focus_point.set(gDebugRaycastIntersection.getF32ptr());
                 }
@@ -7952,7 +8011,9 @@ void LLPipeline::renderFinalize()
                     }
                 }
             }
-
+            // <FS:Beq> FIRE-16728 Add free aim mouse and focus lock
+            last_focus_point = focus_point;
+            // </FS:Beq>
             LLVector3 eye = LLViewerCamera::getInstance()->getOrigin();
             F32 target_distance = 16.f;
             if (!focus_point.isExactlyZero())
@@ -8084,11 +8145,18 @@ void LLPipeline::renderFinalize()
             }
 
             { // combine result based on alpha
-                if (multisample)
+//                if (multisample)
+//                {
+//                    mDeferredLight.bindTarget();
+//                    glViewport(0, 0, mDeferredScreen.getWidth(), mDeferredScreen.getHeight());
+//                }
+// [RLVa:KB] - @setsphere
+                if (pRenderBuffer)
                 {
-                    mDeferredLight.bindTarget();
+					pRenderBuffer->bindTarget();
                     glViewport(0, 0, mDeferredScreen.getWidth(), mDeferredScreen.getHeight());
                 }
+// [/RLVa:KB]
                 else
                 {
                     gGLViewport[0] = gViewerWindow->getWorldViewRectRaw().mLeft;
@@ -8129,18 +8197,30 @@ void LLPipeline::renderFinalize()
 
                 unbindDeferredShader(*shader);
 
-                if (multisample)
+// [RLVa:KB] - @setsphere
+                if (pRenderBuffer)
                 {
-                    mDeferredLight.flush();
+                    pRenderBuffer->flush();
                 }
+// [/RLVa:KB]
+//                if (multisample)
+//                {
+//                    mDeferredLight.flush();
+//                }
             }
         }
         else
         {
-            if (multisample)
+//            if (multisample)
+//            {
+//                mDeferredLight.bindTarget();
+//            }
+// [RLVa:KB] - @setsphere
+            if (pRenderBuffer)
             {
-                mDeferredLight.bindTarget();
+				pRenderBuffer->bindTarget();
             }
+// [/RLVa:KB]
             LLGLSLShader *shader = &gDeferredPostNoDoFProgram;
 
             bindDeferredShader(*shader);
@@ -8168,11 +8248,26 @@ void LLPipeline::renderFinalize()
 
             unbindDeferredShader(*shader);
 
-            if (multisample)
+// [RLVa:KB] - @setsphere
+            if (pRenderBuffer)
             {
-                mDeferredLight.flush();
+				pRenderBuffer->flush();
             }
+// [/RLVa:KB]
+//            if (multisample)
+//            {
+//                mDeferredLight.flush();
+//            }
         }
+
+// [RLVa:KB] - @setsphere
+		if (RlvActions::hasBehaviour(RLV_BHVR_SETSPHERE))
+		{
+			LLShaderEffectParams params(pRenderBuffer, &mScreen, !multisample);
+			LLVfxManager::instance().runEffect(EVisualEffect::RlvSphere, &params);
+			pRenderBuffer = params.m_pDstBuffer;
+		}
+// [/RLVa:KB]
 
         if (multisample)
         {
@@ -8188,11 +8283,18 @@ void LLPipeline::renderFinalize()
             shader->bind();
             shader->uniform2f(LLShaderMgr::DEFERRED_SCREEN_RES, width, height);
 
-            S32 channel = shader->enableTexture(LLShaderMgr::DEFERRED_DIFFUSE, mDeferredLight.getUsage());
+//            S32 channel = shader->enableTexture(LLShaderMgr::DEFERRED_DIFFUSE, mDeferredLight.getUsage());
+//            if (channel > -1)
+//            {
+//                mDeferredLight.bindTexture(0, channel);
+//            }
+// [RLVa:KB] - @setsphere
+			S32 channel = shader->enableTexture(LLShaderMgr::DEFERRED_DIFFUSE, pRenderBuffer->getUsage());
             if (channel > -1)
             {
-                mDeferredLight.bindTexture(0, channel);
+				pRenderBuffer->bindTexture(0, channel);
             }
+// [RLVa:KB]
 
             // <FS:Ansariel> FIRE-16829: Visual Artifacts with ALM enabled on AMD graphics
             //gGL.begin(LLRender::TRIANGLE_STRIP);
@@ -8205,7 +8307,10 @@ void LLPipeline::renderFinalize()
             drawAuxiliaryVB();
             // </FS:Ansariel>
 
-            shader->disableTexture(LLShaderMgr::DEFERRED_DIFFUSE, mDeferredLight.getUsage());
+// [RLVa:KB] - @setsphere
+            shader->disableTexture(LLShaderMgr::DEFERRED_DIFFUSE, pRenderBuffer->getUsage());
+// [/RLVa:KB]
+//            shader->disableTexture(LLShaderMgr::DEFERRED_DIFFUSE, mDeferredLight.getUsage());
             shader->unbind();
 
             mFXAABuffer.flush();
@@ -8249,6 +8354,15 @@ void LLPipeline::renderFinalize()
     }
     else // not deferred
     {
+// [RLVa:KB] - @setsphere
+		if (RlvActions::hasBehaviour(RLV_BHVR_SETSPHERE))
+		{
+			LLShaderEffectParams params(&mScreen, &mDeferredLight, false);
+			LLVfxManager::instance().runEffect(EVisualEffect::RlvSphere, &params);
+			pRenderBuffer = params.m_pDstBuffer;
+		}
+// [/RLVa:KB]
+
         U32 mask = LLVertexBuffer::MAP_VERTEX | LLVertexBuffer::MAP_TEXCOORD0 | LLVertexBuffer::MAP_TEXCOORD1;
         LLPointer<LLVertexBuffer> buff = new LLVertexBuffer(mask, 0);
         buff->allocateBuffer(3, 0, TRUE);
@@ -8291,7 +8405,10 @@ void LLPipeline::renderFinalize()
         }
 
         gGL.getTexUnit(0)->bind(&mGlow[1]);
-        gGL.getTexUnit(1)->bind(&mScreen);
+// [RLVa:KB] - @setsphere
+        gGL.getTexUnit(1)->bind( pRenderBuffer ? pRenderBuffer : &mScreen );
+// [/RLVa:KB]
+//        gGL.getTexUnit(1)->bind(&mScreen);
 
         LLGLEnable multisample(RenderFSAASamples > 0 ? GL_MULTISAMPLE_ARB : 0);
 

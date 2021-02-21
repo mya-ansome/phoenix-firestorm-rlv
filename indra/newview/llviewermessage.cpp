@@ -7292,8 +7292,9 @@ void process_script_question(LLMessageSystem *msg, void **user_data)
 	// so we'll reuse the same namespace for both throttle types.
 	std::string throttle_name = owner_name;
 	std::string self_name;
-	LLAgentUI::buildFullname( self_name );
-	if( owner_name == self_name )
+	LLAgentUI::buildFullname( self_name ); // does not include ' Resident'
+	std::string clean_owner_name = LLCacheName::cleanFullName(owner_name); // removes ' Resident'
+	if( clean_owner_name == self_name )
 	{
 		throttle_name = taskid.getString();
 	}
@@ -7330,7 +7331,7 @@ void process_script_question(LLMessageSystem *msg, void **user_data)
 		S32 count = 0;
 		LLSD args;
 		args["OBJECTNAME"] = object_name;
-		args["NAME"] = LLCacheName::cleanFullName(owner_name);
+		args["NAME"] = clean_owner_name;
 		S32 known_questions = 0;
 		bool has_not_only_debit = questions ^ SCRIPT_PERMISSIONS[SCRIPT_PERMISSION_DEBIT].permbit;
 		// check the received permission flags against each permission
@@ -8177,6 +8178,20 @@ bool callback_script_dialog(const LLSD& notification, const LLSD& response)
 			LLPanelBlockedList::showPanelAndSelect(object_id);
 		}
 	}
+
+// [RLVa:KB] - @sendchat and @sendchannel/sendchannelexcept
+	if ( (RlvActions::isRlvEnabled()) && (0 <= button_idx) )
+	{
+		const S32 nChannel = notification["payload"]["chat_channel"].asInteger();
+
+		// *TODO-RLVa: it's too late into the release cycle to block all script interactions so just take care of the nearby chat loophole for now
+		bool fBlock = (0 == nChannel) ? RlvActions::hasBehaviour(RLV_BHVR_SENDCHAT) : /*!RlvActions::canSendChannel(nChannel)*/false;
+		if (fBlock)
+		{
+			button_idx = -1;
+		}
+	}
+// [/RLVa:KB]
 
 	if (0 <= button_idx)
 	{

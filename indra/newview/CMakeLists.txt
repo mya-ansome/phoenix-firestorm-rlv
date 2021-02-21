@@ -806,6 +806,7 @@ set(viewer_SOURCE_FILES
     llviewerwearable.cpp
     llviewerwindow.cpp
     llviewerwindowlistener.cpp
+	llvisualeffect.cpp
     llvlcomposition.cpp
     llvlmanager.cpp
     llvoavatar.cpp
@@ -851,14 +852,14 @@ set(viewer_SOURCE_FILES
     quickprefs.cpp
     rlvactions.cpp
     rlvenvironment.cpp
-    rlvhandler.cpp
-    rlvhelper.cpp
     rlvcommon.cpp
-    rlvlocks.cpp
-    rlvinventory.cpp
+    rlveffects.cpp
     rlvextensions.cpp
     rlvfloaters.cpp
-    rlvmodifiers.cpp
+    rlvhandler.cpp
+    rlvhelper.cpp
+    rlvinventory.cpp
+    rlvlocks.cpp
     rlvui.cpp
     sanitycheck.cpp
     streamtitledisplay.cpp
@@ -1567,6 +1568,7 @@ set(viewer_HEADER_FILES
     llviewerwearable.h
     llviewerwindow.h
     llviewerwindowlistener.h
+	llvisualeffect.h
     llvlcomposition.h
     llvlmanager.h
     llvoavatar.h
@@ -1609,15 +1611,16 @@ set(viewer_HEADER_FILES
     pieslice.h
     pipeline.h
     rlvactions.h
-    rlvenvironment.h
-    rlvdefines.h
-    rlvhandler.h
-    rlvhelper.h
     rlvcommon.h
-    rlvlocks.h
-    rlvinventory.h
+    rlvdefines.h
+    rlveffects.h
+    rlvenvironment.h
     rlvextensions.h
     rlvfloaters.h
+    rlvhandler.h
+    rlvhelper.h
+    rlvinventory.h
+    rlvlocks.h
     rlvmodifiers.h
     rlvui.h
     roles_constants.h
@@ -2640,7 +2643,7 @@ if (DARWIN)
   set(MACOSX_BUNDLE_BUNDLE_NAME "Firestorm")
   set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${VIEWER_SHORT_VERSION}.${VIEWER_VERSION_REVISION}")
   set(MACOSX_BUNDLE_BUNDLE_VERSION "${VIEWER_SHORT_VERSION}${VIEWER_MACOSX_PHASE}${VIEWER_REVISION}")
-  set(MACOSX_BUNDLE_COPYRIGHT "Copyright 2010-2020 The Phoenix Firestorm Project, Inc.")
+  set(MACOSX_BUNDLE_COPYRIGHT "Copyright 2010-2021 The Phoenix Firestorm Project, Inc.")
   set(MACOSX_BUNDLE_NSMAIN_NIB_FILE "Firestorm.nib")
   set(MACOSX_BUNDLE_NSPRINCIPAL_CLASS "LLApplication")
 
