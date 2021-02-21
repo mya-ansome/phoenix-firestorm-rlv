@@ -49,6 +49,11 @@
 #include "llenvironment.h"
 #include "llsettingssky.h"
 #include "llsettingswater.h"
+// [RLVa:KB] - Checked: RLVa-2.0.0
+#include "rlvactions.h"
+#include "rlvhandler.h"
+#include "rlvlocks.h"
+// [/RLVa:KB]
 
 static float sTime;
 
@@ -168,12 +173,14 @@ void LLDrawPoolWater::render(S32 pass)
 	}
 
 	std::sort(mDrawFace.begin(), mDrawFace.end(), LLFace::CompareDistanceGreater());
-
-	// See if we are rendering water as opaque or not
-	// <FS:Zi> Render speedup for water parameters
-	// if (!gSavedSettings.getBOOL("RenderTransparentWater"))
-	if (!mRenderTransparentWater)
-	// </FS:Zi>
+//MK
+	// if (gRRenabled && gAgent.mRRInterface.mContainsCamTextures)
+	// {
+	// 	renderOpaqueLegacyWater();
+	// 	return;
+	// }
+//mk
+	if (!LLPipeline::sRenderTransparentWater)
 	{
 		// render water for low end hardware
 		renderOpaqueLegacyWater();
@@ -363,8 +370,9 @@ void LLDrawPoolWater::renderOpaqueLegacyWater()
 		{
 			shader = &gObjectSimpleNonIndexedTexGenProgram;
 		}
-
-		shader->bind();
+		//Ma RLV dissable the shader if the vision is restricted
+		if (!RlvActions::isCameraDistanceClamped())
+			shader->bind();
 	}
 
 	stop_glerror();
@@ -591,8 +599,11 @@ void LLDrawPoolWater::shade2(bool edge, LLGLSLShader* shader, const LLColor3& li
 	shader->uniform1f(LLShaderMgr::WATER_WATERHEIGHT, eyedepth);
 	shader->uniform1f(LLShaderMgr::WATER_TIME, sTime);
 	shader->uniform3fv(LLShaderMgr::WATER_EYEVEC, 1, camera.getOrigin().mV); // <FS:Ansariel> Factor out instance() calls
+	// if (!RlvActions::isCameraDistanceClamped())
+	// {
 	shader->uniform3fv(LLShaderMgr::WATER_SPECULAR, 1, light_diffuse.mV);
 	shader->uniform1f(LLShaderMgr::WATER_SPECULAR_EXP, light_exp);
+	// }
     if (environment.isCloudScrollPaused()) // <FS:Ansariel> Factor out instance() calls
     {
         static const std::array<F32, 2> zerowave{ {0.0f, 0.0f} };
@@ -809,9 +820,11 @@ void LLDrawPoolWater::shade()
 	    }
 	}
 
-    shade2(false, shader, light_diffuse, light_dir, light_exp);
-    shade2(true, edge_shader ? edge_shader : shader, light_diffuse, light_dir, light_exp);
-
+	// Ma RLV don't draw the far edge is vision si restricted
+	if (!RlvActions::isCameraDistanceClamped()){
+    	shade2(false, shader, light_diffuse, light_dir, light_exp);
+	    shade2(true, edge_shader ? edge_shader : shader, light_diffuse, light_dir, light_exp);
+	}
 	gGL.getTexUnit(0)->activate();
 	gGL.getTexUnit(0)->enable(LLTexUnit::TT_TEXTURE);
 	if (!deferred_render)

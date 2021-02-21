@@ -5893,6 +5893,16 @@ void LLVolumeGeometryManager::rebuildGeom(LLSpatialGroup* group)
 							((LLDrawPoolAvatar*) old_pool)->removeRiggedFace(facep);
 						}
 
+//MK
+						// Do not render surfaces with 0% alpha (unless we are in alpha debug mode)
+						if (1 ) // && !gAgent.mRRInterface.sRestrainedLoveRenderInvisibleSurfaces !LLDrawPoolAlpha::sShowDebugAlpha
+						{
+							if (te->getColor().mV[3] < 0.0001f)
+							{
+								continue;
+							}
+						}
+//mk
 						//add face to new pool
 						LLViewerTexture* tex = facep->getTexture();
 						U32 type = gPipeline.getPoolTypeFromTE(te, tex);
@@ -6065,7 +6075,16 @@ void LLVolumeGeometryManager::rebuildGeom(LLSpatialGroup* group)
 					{
 						emissive = true;
 					}
-
+//MK
+					// Do not render surfaces with 0% alpha (unless we are in alpha debug mode or they glow)
+					if (!emissive ) // && !gAgent.mRRInterface.sRestrainedLoveRenderInvisibleSurfaces && !LLDrawPoolAlpha::sShowDebugAlpha
+					{
+						if (te->getColor().mV[3] < 0.0001f)
+						{
+							continue;
+						}
+					}
+//mk
 					if (facep->isState(LLFace::TEXTURE_ANIM))
 					{
 						if (!vobj->mTexAnimMode)
@@ -6338,6 +6357,7 @@ void LLVolumeGeometryManager::rebuildMesh(LLSpatialGroup* group)
 	llassert(group);
 	if (group && group->hasState(LLSpatialGroup::MESH_DIRTY) && !group->hasState(LLSpatialGroup::GEOM_DIRTY))
 	{
+		//TODO: improve performances here
 		LL_RECORD_BLOCK_TIME(FTM_REBUILD_VOLUME_VB);
 		LL_RECORD_BLOCK_TIME(FTM_REBUILD_VOLUME_GEN_DRAW_INFO); //make sure getgeometryvolume shows up in the right place in timers
 
@@ -6506,6 +6526,7 @@ static LLTrace::BlockTimerStatHandle FTM_GEN_DRAW_INFO_RESIZE_VB("Resize VB");
 
 U32 LLVolumeGeometryManager::genDrawInfo(LLSpatialGroup* group, U32 mask, LLFace** faces, U32 face_count, BOOL distance_sort, BOOL batch_textures, BOOL no_materials)
 {
+	//TODO: improve performances here
 	LL_RECORD_BLOCK_TIME(FTM_REBUILD_VOLUME_GEN_DRAW_INFO);
 
 	U32 geometryBytes = 0;

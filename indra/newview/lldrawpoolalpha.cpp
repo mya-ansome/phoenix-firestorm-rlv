@@ -49,6 +49,11 @@
 #include "llspatialpartition.h"
 #include "llglcommonfunc.h"
 
+//MK
+#include "llagent.h"
+#include "llvovolume.h"
+//mk
+
 #include "rlvactions.h"
 #include "rlvhandler.h"
 
@@ -632,9 +637,9 @@ void LLDrawPoolAlpha::renderAlpha(U32 mask, S32 pass)
 	// We don't need to calculate all that stuff if the vision is not restricted.
 	if (vision_restricted)
 	{
-		static RlvCachedBehaviourModifier<float> mCamDistDrawMin(RLV_MODIFIER_SETCAM_DRAWMIN);
+		static RlvCachedBehaviourModifier<float> mCamDistDrawMax(RLV_MODIFIER_SETCAM_DRAWMAX);
 		joint_pos = RlvHandler::getInstance()->getCamDistDrawFromJoint()->getWorldPosition();
-		cam_dist_draw_max_squared = mCamDistDrawMin * mCamDistDrawMin;
+		cam_dist_draw_max_squared = mCamDistDrawMax * mCamDistDrawMax;
 	}
 //mk
 
@@ -710,7 +715,45 @@ void LLDrawPoolAlpha::renderAlpha(U32 mask, S32 pass)
 						}
 					}
 				}
+//MK
+				LLFace*	facep = params.mFace;
+				if (facep)
+				{
+					LLDrawable* drawable = facep->getDrawable();
+					if (drawable)
+					{
+						LLVOVolume* vovolume = drawable->getVOVolume();
+						if (vovolume)
+						{
+							if (vision_restricted)
+							{
+								// If we are under @camtextures, do not render this alpha surface if it is phantom and it is not an attachment
+								if (gRlvHandler.hasBehaviour(RLV_BHVR_SETCAM_TEXTURES) && vovolume->flagPhantom() && !vovolume->isAttachment())
+								{
+									continue;
+								}
 
+								// Do not render any alpha surface (except on our HUDs) if the vision is restricted and 
+								// the face is farther than the outer vision sphere.
+								LLVector3 face_pos = LLVector3::zero;
+								LLVector3 face_avatar_offset = LLVector3::zero;
+								F32 face_distance_to_avatar_squared = EXTREMUM;
+
+								if (!vovolume->isHUDAttachment())
+								{
+									face_pos = facep->getPositionAgent();
+									face_avatar_offset = face_pos - joint_pos;
+									face_distance_to_avatar_squared = (F32)face_avatar_offset.magVecSquared();
+									if (face_distance_to_avatar_squared > cam_dist_draw_max_squared)
+									{
+										continue;
+									}
+								}
+							}
+						}
+					}
+				}
+//mk
                 if (params.mFullbright && batch_fullbrights)
 				{
                     fullbrights.push_back(&params);

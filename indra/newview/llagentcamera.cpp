@@ -309,7 +309,19 @@ void LLAgentCamera::resetView(BOOL reset_camera, BOOL change_camera, BOOL moveme
 	{
 		return;
 	}
+//MK
+	if ( RlvHandler::isEnabled() )
+	{
+		float nDistMin, nDistMax;
+        bool  fCamAvDistClamped = RlvActions::getCameraAvatarDistanceLimits(nDistMin, nDistMax);
 
+		if (fCamAvDistClamped && mCameraMode != CAMERA_MODE_MOUSELOOK && nDistMax <= 0.0)
+		{
+			changeCameraToMouselook(FALSE);
+			return;
+		}
+	}
+//mk
 	if (gAgent.getAutoPilot())
 	{
 		gAgent.stopAutoPilot(TRUE);
@@ -377,8 +389,14 @@ void LLAgentCamera::resetView(BOOL reset_camera, BOOL change_camera, BOOL moveme
 			agent_at_axis.normalize();
 			gAgent.resetAxes(lerp(gAgent.getAtAxis(), agent_at_axis, LLSmoothInterpolation::getInterpolant(0.3f)));
 		}
-
-		setFocusOnAvatar(TRUE, ANIMATE);
+//MK
+		// Set "reset_axes" to FALSE so the avatar does not move when we press ESC, the camera simply goes back to its default position, like before.
+		// However, allow the camera to reset when we nudge the avatar with the arrow keys.
+		// change_camera is FALSE when we nudge, TRUE when we reset the view.
+////		setFocusOnAvatar(TRUE, ANIMATE);
+		setFocusOnAvatar(TRUE, ANIMATE, !change_camera);
+//mk
+//		setFocusOnAvatar(TRUE, ANIMATE);
 
 		mCameraFOVZoomFactor = 0.f;
 	}
@@ -1029,6 +1047,21 @@ void LLAgentCamera::cameraZoomIn(const F32 fraction)
 //-----------------------------------------------------------------------------
 void LLAgentCamera::cameraOrbitIn(const F32 meters)
 {
+//MK
+	if (RlvHandler::isEnabled())
+	{
+		// If we have to force the camera distance because of RLV restrictions,
+		// don't do anything else
+		
+		if (RlvActions::isCameraDistanceClamped())
+		{
+			// return;
+		}
+	}
+//mk
+
+
+
 	if (mFocusOnAvatar && mCameraMode == CAMERA_MODE_THIRD_PERSON)
 	{
 // [RLVa:KB] - @setcam_eyeoffsetscale
@@ -1410,7 +1443,19 @@ void LLAgentCamera::updateCamera()
 
 	// perform field of view correction
 	mCameraFOVZoomFactor = calcCameraFOVZoomFactor();
+
+//MK
+	// Don't reposition the camera at all when the camera is RLV-restricted
+    float nDistMin, nDistMax;
+    RlvActions::getCameraAvatarDistanceLimits(nDistMin, nDistMax);
+	if (!RlvActions::isRlvEnabled() || nDistMax >= EXTREMUM * 0.75)
+	{
+//mk
 	camera_target_global = focus_target_global + (camera_target_global - focus_target_global) * (1.f + mCameraFOVZoomFactor);
+//MK
+	}
+//mk
+	// camera_target_global = focus_target_global + (camera_target_global - focus_target_global) * (1.f + mCameraFOVZoomFactor);
 
 	gAgent.setShowAvatar(TRUE); // can see avatar by default
 
@@ -1612,6 +1657,27 @@ void LLAgentCamera::updateCamera()
 		torso_joint->setScale(torso_scale);
 		chest_joint->setScale(chest_scale);
 	}
+//MK
+	if (mCameraMode != CAMERA_MODE_FOLLOW)
+	{
+		if (RlvHandler::isEnabled())
+		{
+            float nDistMin, nDistMax;
+            bool  fCamAvDistClamped = RlvActions::getCameraAvatarDistanceLimits(nDistMin, nDistMax);
+
+			BOOL isfirstPerson = mCameraMode == CAMERA_MODE_MOUSELOOK;
+
+			if (isfirstPerson && fCamAvDistClamped && nDistMin > 0.f)
+			{
+				changeCameraToDefault();
+			}
+            else if (!isfirstPerson && fCamAvDistClamped && nDistMax <= 0.f)
+			{
+				changeCameraToMouselook();
+			}
+		}
+	}
+//mk
 }
 
 void LLAgentCamera::updateLastCamera()
@@ -2087,6 +2153,11 @@ LLVector3d LLAgentCamera::calcCameraPositionTargetGlobal(BOOL *hit_limit)
 		if ((fCamOriginDistClamped = RlvActions::getCameraOriginDistanceLimits(nCamOriginDistLimitMin, nCamOriginDistLimitMax)))
 			fCamOriginDistLocked = nCamOriginDistLimitMin == nCamOriginDistLimitMax;
 
+			if(nCamAvDistLimitMax <= 0.0)
+				gAgentCamera.changeCameraToMouselook();
+			// else
+			// 	gAgentCamera.changeCameraToDefault();
+
 		// Check focus distance limits
 		if ( (fCamOriginDistClamped) && (!fCamAvDistLocked) )
 		{
@@ -2378,6 +2449,23 @@ void LLAgentCamera::resetCamera()
 //-----------------------------------------------------------------------------
 void LLAgentCamera::changeCameraToMouselook(BOOL animate)
 {
+	gSavedSettings.setBOOL("FSShowInterfaceInMouselook", true);
+	gSavedSettings.setBOOL("EnableMouselook", true);
+//MK
+    float nDistMin, nDistMax;
+    RlvActions::getCameraAvatarDistanceLimits(nDistMin, nDistMax);
+	if (!RlvActions::isRlvEnabled() || nDistMax > 0.f)
+	{
+//mk
+	if (!gSavedSettings.getBOOL("EnableMouselook") 
+		|| LLViewerJoystick::getInstance()->getOverrideCamera())
+	{
+		return;
+	}
+//MK
+	}
+//mk
+/*
 	if (!gSavedSettings.getBOOL("EnableMouselook") 
 // [RLVa:KB] - Checked: RLVa-2.0.0
 		|| ( (RlvActions::isRlvEnabled()) && (!RlvActions::canChangeToMouselook()) )
@@ -2388,6 +2476,7 @@ void LLAgentCamera::changeCameraToMouselook(BOOL animate)
 		return;
 	}
 	
+	*/
 	// visibility changes at end of animation
 	gViewerWindow->getWindow()->resetBusyCount();
 
@@ -2411,7 +2500,7 @@ void LLAgentCamera::changeCameraToMouselook(BOOL animate)
 //	gViewerWindow->hideCursor();
 //	gViewerWindow->moveCursorToCenter();
 
-	if (mCameraMode != CAMERA_MODE_MOUSELOOK)
+	// if (mCameraMode != CAMERA_MODE_MOUSELOOK)
 	{
 		gFocusMgr.setKeyboardFocus(NULL);
 		
@@ -2436,6 +2525,13 @@ void LLAgentCamera::changeCameraToMouselook(BOOL animate)
 			gAgent.endAnimationUpdateUI();
 		}
 	}
+	//MK
+	LLVector3 at_axis;
+	at_axis = gAgent.getFrameAgent().getAtAxis();
+	at_axis.mV[VZ] = 0.f;
+	at_axis.normalize();
+	gAgent.resetAxes(at_axis);
+//mk
 }
 
 
@@ -2444,10 +2540,19 @@ void LLAgentCamera::changeCameraToMouselook(BOOL animate)
 //-----------------------------------------------------------------------------
 void LLAgentCamera::changeCameraToDefault()
 {
-	if (LLViewerJoystick::getInstance()->getOverrideCamera())
+//MK
+    float nDistMin, nDistMax;
+    RlvActions::getCameraAvatarDistanceLimits(nDistMin, nDistMax);
+	if (!RlvActions::isRlvEnabled() || nDistMax > 0.f)
 	{
-		return;
+//mk	
+		if (LLViewerJoystick::getInstance()->getOverrideCamera())
+		{
+			return;
+		}
+//MK
 	}
+//mk
 
 	if (LLFollowCamMgr::getInstance()->getActiveFollowCamParams())
 	{
@@ -2470,10 +2575,18 @@ void LLAgentCamera::changeCameraToDefault()
 //-----------------------------------------------------------------------------
 void LLAgentCamera::changeCameraToFollow(BOOL animate)
 {
+	float nDistMin, nDistMax;RlvActions::getCameraAvatarDistanceLimits(nDistMin, nDistMax);
+	//MK
+	if (!RlvActions::isRlvEnabled() || nDistMax > 0.f)
+	{
+//mk
 	if (LLViewerJoystick::getInstance()->getOverrideCamera())
 	{
 		return;
 	}
+//MK
+	}
+//mk
 
 	if(mCameraMode != CAMERA_MODE_FOLLOW)
 	{
@@ -2526,10 +2639,20 @@ void LLAgentCamera::changeCameraToFollow(BOOL animate)
 //-----------------------------------------------------------------------------
 void LLAgentCamera::changeCameraToThirdPerson(BOOL animate)
 {
+    float nDistMin, nDistMax;
+    RlvActions::getCameraAvatarDistanceLimits(nDistMin, nDistMax);
+
+//MK
+	if (!RlvActions::isRlvEnabled() || nDistMax > 0.f)
+	{
+//mk
 	if (LLViewerJoystick::getInstance()->getOverrideCamera())
 	{
 		return;
 	}
+//MK
+	}
+//mk
 
 	gViewerWindow->getWindow()->resetBusyCount();
 
@@ -2591,6 +2714,18 @@ void LLAgentCamera::changeCameraToThirdPerson(BOOL animate)
 		mCameraAnimating = FALSE;
 		gAgent.endAnimationUpdateUI();
 	}
+	//MK
+	if (RlvActions::isRlvEnabled())
+	{
+        float nDistMin, nDistMax;
+        bool fCamAvDistClamped = RlvActions::getCameraAvatarDistanceLimits(nDistMin, nDistMax);
+        if (fCamAvDistClamped && nDistMax <= 0.f)
+		{
+			changeCameraToMouselook(false); // make sure we stay in mouselook
+			return;
+		}
+	}
+//mk
 }
 
 //-----------------------------------------------------------------------------

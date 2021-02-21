@@ -36,7 +36,10 @@
 #include "llspatialpartition.h"
 #include "llviewershadermgr.h"
 #include "llrender.h"
-
+// [RLVa:KB]
+#include "rlvactions.h"
+#include "rlvhandler.h"
+// [/RLVa:KB]
 static LLGLSLShader* simple_shader = NULL;
 static LLGLSLShader* fullbright_shader = NULL;
 
@@ -61,6 +64,13 @@ static LLTrace::BlockTimerStatHandle FTM_RENDER_GLOW_PUSH("Glow Push");
 
 void LLDrawPoolGlow::renderPostDeferred(S32 pass)
 {
+//MK
+	// If the vision is restricted, don't show any glow in-world (attachments work)
+	if (RlvActions::isCameraDistanceClamped())
+	{
+		return;
+	}
+//mk
 	LL_RECORD_BLOCK_TIME(FTM_RENDER_GLOW);
 	LLGLEnable blend(GL_BLEND);
 	LLGLDisable test(GL_ALPHA_TEST);
@@ -102,6 +112,13 @@ S32 LLDrawPoolGlow::getNumPasses()
 
 void LLDrawPoolGlow::render(S32 pass)
 {
+//MK
+	// If the vision is restricted, don't show any glow in-world (attachments work)
+	if (RlvActions::isCameraDistanceClamped())
+	{
+		return;
+	}
+//mk
 	LL_RECORD_BLOCK_TIME(FTM_RENDER_GLOW);
 	LLGLEnable blend(GL_BLEND);
 	LLGLDisable test(GL_ALPHA_TEST);
