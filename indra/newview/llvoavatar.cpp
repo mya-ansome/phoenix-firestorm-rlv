@@ -4565,28 +4565,6 @@ void LLVOAvatar::updateFootstepSounds()
 //------------------------------------------------------------------------
 void LLVOAvatar::computeUpdatePeriod()
 {
-	//MK
-	mCachedIsRlvSilhouette = FALSE;
-	if (RlvHandler::isEnabled() && !isSelf() && gAgentAvatarp && getRezzedStatus() >= 2) // fully rezzed
-	{
-		static RlvCachedBehaviourModifier<float> mCamDistDrawMax(RLV_MODIFIER_SETCAM_DRAWMAX);
-		LLVector3d my_head_pos (gAgent.getPosGlobalFromAgent(gAgentAvatarp->mHeadp->getWorldPosition()));
-		LLVector3d their_head_pos (gAgent.getPosGlobalFromAgent(mHeadp->getWorldPosition()));
-		LLVector3d offset (their_head_pos - my_head_pos);
-		F32 distance_squared = (F32)offset.magVecSquared();
-		static RlvCachedBehaviourModifier<float> mShowavsDistMax(RLV_MODIFIER_SETCAM_AVDISTMAX);
-		F32 show_avs_dist_max_squared = mShowavsDistMax * mShowavsDistMax;
-		F32 cam_dist_draw_max_squared = mCamDistDrawMax * mCamDistDrawMax;
-
-		// If the avatar is farther than the "camavdist" distance, render as silhouette.
-		// But if the outer sphere is opaque, no need to render a silhouette or even the avatar at all.
-		static RlvCachedBehaviourModifier<float> mCamAlphaDrawMax(RLV_MODIFIER_SETCAM_DRAWALPHAMAX);
-		mCachedIsRlvSilhouette = (
-			distance_squared > show_avs_dist_max_squared
-			&& !(distance_squared > cam_dist_draw_max_squared && mCamAlphaDrawMax >= 1.f)
-			);
-	}
-//mk
 
 	bool visually_muted = isVisuallyMuted();
 	/*
