@@ -4865,6 +4865,7 @@ void LLAppViewer::userQuit()
 	else
 	{
 		LLNotificationsUtil::add("ConfirmQuit");
+		gViewerWindow->showCursor();
 	}
 }
 
