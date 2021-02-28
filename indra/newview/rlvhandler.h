@@ -22,6 +22,7 @@
 #include "lltooldraganddrop.h"
 #include "llagent.h"
 #include "llagentcamera.h"
+#include "llmutex.h"
 
 #include <stack>
 
@@ -236,6 +237,8 @@ protected:
 	 * Member variables
 	 */
 public:
+	mutable LLMutex mMutex;
+
 	typedef std::map<LLUUID, RlvObject> rlv_object_map_t;
 	typedef std::tuple<LLUUID, std::string, double> rlv_blocked_object_t;
 	typedef std::list<rlv_blocked_object_t> rlv_blocked_object_list_t;

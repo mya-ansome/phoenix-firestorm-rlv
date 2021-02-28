@@ -193,6 +193,7 @@ void RlvHandler::cleanup()
 	// Clean up what's left
 	//
 	gAgent.removeListener(this);
+	LLMutexLock lock(&mMutex);
 	m_Retained.clear();
 	//delete m_pGCTimer;	// <- deletes itself
 
@@ -584,8 +585,11 @@ ERlvCmdRet RlvHandler::processCommand(const LLUUID& idObj, const std::string& st
 	const RlvCommand rlvCmd(idObj, strCommand);
 	if (STATE_STARTED != LLStartUp::getStartupState())
 	{
+		LLMutexLock lock(&mMutex);
 		m_Retained.push_back(rlvCmd);
-		return RLV_RET_RETAINED;
+		mMutex.unlock();
+//        LLMutexLock unlock(&mMutex);
+        return RLV_RET_RETAINED;
 	}
 	return processCommand(std::ref(rlvCmd), fFromObj);
 }
@@ -593,6 +597,7 @@ ERlvCmdRet RlvHandler::processCommand(const LLUUID& idObj, const std::string& st
 // Checked: 2010-02-27 (RLVa-1.2.0a) | Modified: RLVa-1.1.0f
 void RlvHandler::processRetainedCommands(ERlvBehaviour eBhvrFilter /*=RLV_BHVR_UNKNOWN*/, ERlvParamType eTypeFilter /*=RLV_TYPE_UNKNOWN*/)
 {
+	LLMutexLock lock(&mMutex);
 	rlv_command_list_t::iterator itCmd = m_Retained.begin(), itCurCmd;
 	while (itCmd != m_Retained.end())
 	{
