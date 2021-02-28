@@ -11,6 +11,7 @@
 *~
 
 # Specific paths and/or names
+Release*
 LICENSES
 build-darwin-*
 build-linux-*
