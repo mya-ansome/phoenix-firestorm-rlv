@@ -587,7 +587,7 @@ ERlvCmdRet RlvHandler::processCommand(const LLUUID& idObj, const std::string& st
 	{
 		LLMutexLock lock(&mMutex);
 		m_Retained.push_back(rlvCmd);
-		mMutex.unlock();
+		// mMutex.unlock();
 //        LLMutexLock unlock(&mMutex);
         return RLV_RET_RETAINED;
 	}
