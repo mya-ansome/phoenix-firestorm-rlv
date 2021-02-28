@@ -806,6 +806,7 @@ set(viewer_SOURCE_FILES
     llviewerwearable.cpp
     llviewerwindow.cpp
     llviewerwindowlistener.cpp
+	llvisualeffect.cpp
     llvlcomposition.cpp
     llvlmanager.cpp
     llvoavatar.cpp
@@ -851,14 +852,14 @@ set(viewer_SOURCE_FILES
     quickprefs.cpp
     rlvactions.cpp
     rlvenvironment.cpp
-    rlvhandler.cpp
-    rlvhelper.cpp
     rlvcommon.cpp
-    rlvlocks.cpp
-    rlvinventory.cpp
+    rlveffects.cpp
     rlvextensions.cpp
     rlvfloaters.cpp
-    rlvmodifiers.cpp
+    rlvhandler.cpp
+    rlvhelper.cpp
+    rlvinventory.cpp
+    rlvlocks.cpp
     rlvui.cpp
     sanitycheck.cpp
     streamtitledisplay.cpp
@@ -1567,6 +1568,7 @@ set(viewer_HEADER_FILES
     llviewerwearable.h
     llviewerwindow.h
     llviewerwindowlistener.h
+	llvisualeffect.h
     llvlcomposition.h
     llvlmanager.h
     llvoavatar.h
@@ -1609,15 +1611,16 @@ set(viewer_HEADER_FILES
     pieslice.h
     pipeline.h
     rlvactions.h
-    rlvenvironment.h
-    rlvdefines.h
-    rlvhandler.h
-    rlvhelper.h
     rlvcommon.h
-    rlvlocks.h
-    rlvinventory.h
+    rlvdefines.h
+    rlveffects.h
+    rlvenvironment.h
     rlvextensions.h
     rlvfloaters.h
+    rlvhandler.h
+    rlvhelper.h
+    rlvinventory.h
+    rlvlocks.h
     rlvmodifiers.h
     rlvui.h
     roles_constants.h
@@ -1796,6 +1799,29 @@ if (LINUX)
       SET_SOURCE_FILES_PROPERTIES(llviewermenu.cpp PROPERTIES COMPILE_FLAGS -fno-var-tracking-assignments)
     endif()
     # </FS:ND>
+
+    # Replace the icons with the appropriate ones for the channel
+    # ('test' is the default)
+    set(ICON_PATH "private")
+    string(TOLOWER ${VIEWER_CHANNEL} channel_lower)
+    if(channel_lower MATCHES "release")
+        set(ICON_PATH "release")
+    elseif(channel_lower MATCHES "beta")
+        set(ICON_PATH "beta")
+    elseif(channel_lower MATCHES "project")
+        set(ICON_PATH "project")
+    endif()
+
+    if (OPENSIM)
+        set(ICON_PATH "${ICON_PATH}-os")
+    endif (OPENSIM)
+
+    message(STATUS "Copying icons for ${ICON_PATH}")
+    execute_process(
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/icons/${ICON_PATH}/firestorm_256.bmp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/res-sdl/firestorm_icon.BMP"
+      )
 endif (LINUX)
 
 if (WINDOWS)
@@ -1836,18 +1862,25 @@ if (WINDOWS)
     # Replace the icons with the appropriate ones for the channel
     # ('test' is the default)
     set(ICON_PATH "private")
-    set(VIEWER_MACOSX_PHASE "d")
+    #set(VIEWER_MACOSX_PHASE "d") # <FS:Ansariel> Moved to OSX section
     string(TOLOWER ${VIEWER_CHANNEL} channel_lower)
     if(channel_lower MATCHES "release")
         set(ICON_PATH "release")
-        set(VIEWER_MACOSX_PHASE "f")
+        #set(VIEWER_MACOSX_PHASE "f") # <FS:Ansariel> Moved to OSX section
     elseif(channel_lower MATCHES "beta")
         set(ICON_PATH "beta")
-        set(VIEWER_MACOSX_PHASE "b")
+        #set(VIEWER_MACOSX_PHASE "b") # <FS:Ansariel> Moved to OSX section
     elseif(channel_lower MATCHES "project")
         set(ICON_PATH "project")
-        set(VIEWER_MACOSX_PHASE "a")
+        #set(VIEWER_MACOSX_PHASE "a") # <FS:Ansariel> Moved to OSX section
     endif()
+
+    # <FS:Ansariel> FIRE-24335: Use different icon for OpenSim version
+    if (OPENSIM)
+        set(ICON_PATH "${ICON_PATH}-os")
+    endif (OPENSIM)
+    # <FS:Ansariel>
+
     message(STATUS "Copying icons for ${ICON_PATH}")
     execute_process(
       COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -2585,6 +2618,18 @@ endif (NOT ENABLE_MEDIA_PLUGINS)
 endif (LINUX)
 
 if (DARWIN)
+    # <FS:Ansariel> Moved from Windows section
+    set(VIEWER_MACOSX_PHASE "d")
+    string(TOLOWER ${VIEWER_CHANNEL} channel_lower)
+    if(channel_lower MATCHES "release")
+        set(VIEWER_MACOSX_PHASE "f")
+    elseif(channel_lower MATCHES "beta")
+        set(VIEWER_MACOSX_PHASE "b")
+    elseif(channel_lower MATCHES "project")
+        set(VIEWER_MACOSX_PHASE "a")
+    endif()
+    # </FS:Ansariel>
+
   # These all get set with PROPERTIES. It's not that the property names are
   # magically known to CMake -- it's that these names are referenced in the
   # Info-SecondLife.plist file in the configure_file() directive below.
@@ -2598,7 +2643,7 @@ if (DARWIN)
   set(MACOSX_BUNDLE_BUNDLE_NAME "Firestorm")
   set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${VIEWER_SHORT_VERSION}.${VIEWER_VERSION_REVISION}")
   set(MACOSX_BUNDLE_BUNDLE_VERSION "${VIEWER_SHORT_VERSION}${VIEWER_MACOSX_PHASE}${VIEWER_REVISION}")
-  set(MACOSX_BUNDLE_COPYRIGHT "Copyright 2010-2020 The Phoenix Firestorm Project, Inc.")
+  set(MACOSX_BUNDLE_COPYRIGHT "Copyright 2010-2021 The Phoenix Firestorm Project, Inc.")
   set(MACOSX_BUNDLE_NSMAIN_NIB_FILE "Firestorm.nib")
   set(MACOSX_BUNDLE_NSPRINCIPAL_CLASS "LLApplication")
 

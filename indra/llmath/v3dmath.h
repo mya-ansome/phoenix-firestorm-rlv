@@ -29,6 +29,7 @@
 
 #include "llerror.h"
 #include "v3math.h"
+#include "v3color.h"
 
 class LLVector3d
 {
@@ -117,6 +118,7 @@ class LLVector3d
 		friend bool operator!=(const LLVector3d& a, const LLVector3d& b);		// Return a != b
 // [RLVa:KB] - RlvBehaviourModifierCompMin/Max
 		friend bool operator<(const LLVector3 &a, const LLVector3 &b);		// Return a < b
+		friend bool operator<(const LLColor3 &a, const LLColor3 &b);		// Return a < b
 // [/RLVa:KB]
 
 		friend const LLVector3d& operator+=(LLVector3d& a, const LLVector3d& b);	// Return vector a + b
@@ -401,11 +403,18 @@ inline bool operator!=(const LLVector3d& a, const LLVector3d& b)
 // [RLVa:KB] - RlvBehaviourModifierCompMin/Max
 inline bool operator<(const LLVector3d& lhs, const LLVector3d& rhs)
 {
-	return (lhs.mdV[0] < rhs.mdV[0]
-			|| (lhs.mdV[0] == rhs.mdV[0]
-				&& (lhs.mdV[1] < rhs.mdV[1]
-					|| ((lhs.mdV[1] == rhs.mdV[1])
-						&& lhs.mdV[2] < rhs.mdV[2]))));
+	return std::tie(lhs.mdV[0], lhs.mdV[1], lhs.mdV[2]) < std::tie(rhs.mdV[0], rhs.mdV[1], rhs.mdV[2]);
+}
+// [/RLVa:KB]
+
+// [RLVa:KB] - RlvBehaviourModifierCompMin/Max
+inline bool operator<(const LLColor3& lhs, const LLColor3& rhs)
+{
+	return (lhs.mV[0] < rhs.mV[0]
+			|| (lhs.mV[0] == rhs.mV[0]
+				&& (lhs.mV[1] < rhs.mV[1]
+					|| ((lhs.mV[1] == rhs.mV[1])
+						&& lhs.mV[2] < rhs.mV[2]))));
 }
 // [/RLVa:KB]
 

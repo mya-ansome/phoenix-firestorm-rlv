@@ -67,9 +67,6 @@ F32 LLDrawPoolWater::sWaterFogEnd = 0.f;
 LLDrawPoolWater::LLDrawPoolWater() : LLFacePool(POOL_WATER)
 {
 	// <FS:Zi> Render speedup for water parameters
-	gSavedSettings.getControl("RenderTransparentWater")->getCommitSignal()->connect(boost::bind(&LLDrawPoolWater::onRenderTransparentWaterChanged, this));
-	onRenderTransparentWaterChanged();
-
 	gSavedSettings.getControl("RenderWaterMipNormal")->getCommitSignal()->connect(boost::bind(&LLDrawPoolWater::onRenderWaterMipNormalChanged, this));
 	onRenderWaterMipNormalChanged();
 	// </FS:Zi>
@@ -845,13 +842,8 @@ LLColor3 LLDrawPoolWater::getDebugColor() const
 }
 
 // <FS:Zi> Render speedup for water parameters
-void LLDrawPoolWater::onRenderTransparentWaterChanged()
-{
-	mRenderTransparentWater = gSavedSettings.getBOOL("RenderTransparentWater");
-}
-
 void LLDrawPoolWater::onRenderWaterMipNormalChanged()
 {
-	mRenderWaterMipNormal = gSavedSettings.getBOOL("RenderWaterMipNormal");
+	mRenderWaterMipNormal = (bool)gSavedSettings.getBOOL("RenderWaterMipNormal");
 }
 // </FS:Zi>

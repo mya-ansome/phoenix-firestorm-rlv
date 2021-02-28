@@ -79,8 +79,10 @@
 
 #include "llenvironment.h"
 // [RLVa:KB] - Checked: 2011-05-22 (RLVa-1.3.1a)
-#include "rlvhandler.h"
+#include "llvisualeffect.h"
+#include "rlvactions.h"
 #include "rlvlocks.h"
+#include "rlvhandler.h"
 // [/RLVa:KB]
 #include "llpresetsmanager.h"
 #include "fsdata.h"
@@ -471,6 +473,7 @@ void display(BOOL rebuild, F32 zoom_factor, int subfield, BOOL for_snapshot)
 		if( (gAgent.getTeleportState() != LLAgent::TELEPORT_START) && (teleport_percent > 100.f) )
 		{
 			// Give up.  Don't keep the UI locked forever.
+			LL_WARNS("Teleport") << "Giving up on teleport. elapsed time " << teleport_elapsed << " exceeds max time " << teleport_save_time << LL_ENDL;
 			gAgent.setTeleportState( LLAgent::TELEPORT_NONE );
 			gAgent.setTeleportMessage(std::string());
 		}
@@ -509,7 +512,7 @@ void display(BOOL rebuild, F32 zoom_factor, int subfield, BOOL for_snapshot)
 			gTeleportDisplayTimer.reset();
 			gViewerWindow->setShowProgress(TRUE,!gSavedSettings.getBOOL("FSDisableTeleportScreens"));
 			gViewerWindow->setProgressPercent(llmin(teleport_percent, 0.0f));
-
+			LL_INFOS("Teleport") << "A teleport request has been sent, setting state to TELEPORT_REQUESTED" << LL_ENDL;
 			gAgent.setTeleportState( LLAgent::TELEPORT_REQUESTED );
 			gAgent.setTeleportMessage(
 				LLAgent::sTeleportProgressMessages["requesting"]);
@@ -535,6 +538,7 @@ void display(BOOL rebuild, F32 zoom_factor, int subfield, BOOL for_snapshot)
 			gTeleportArrivalTimer.reset();
 				gViewerWindow->setProgressCancelButtonVisible(FALSE, LLTrans::getString("Cancel"));
 			gViewerWindow->setProgressPercent(75.f);
+			LL_INFOS("Teleport") << "Changing state to TELEPORT_ARRIVING" << LL_ENDL;
 			gAgent.setTeleportState( LLAgent::TELEPORT_ARRIVING );
 			gAgent.setTeleportMessage(
 				LLAgent::sTeleportProgressMessages["arriving"]);
@@ -556,6 +560,7 @@ void display(BOOL rebuild, F32 zoom_factor, int subfield, BOOL for_snapshot)
 				{
 					arrival_fraction = 1.f;
 					//LLFirstUse::useTeleport();
+					LL_INFOS("Teleport") << "arrival_fraction is " << arrival_fraction << " changing state to TELEPORT_NONE" << LL_ENDL;
 					gAgent.setTeleportState( LLAgent::TELEPORT_NONE );
 				}
 				gViewerWindow->setProgressCancelButtonVisible(FALSE, LLTrans::getString("Cancel"));
@@ -573,6 +578,10 @@ void display(BOOL rebuild, F32 zoom_factor, int subfield, BOOL for_snapshot)
 				// </FS:CR>
 				{
 					//LLFirstUse::useTeleport();
+					LL_INFOS("Teleport") << "State is local and gTeleportDisplayTimer " << gTeleportDisplayTimer.getElapsedTimeF32()
+										 << " exceeds teleport_local_delete " << teleport_local_delay
+										 << "; setting state to TELEPORT_NONE"
+										 << LL_ENDL;
 					gAgent.setTeleportState( LLAgent::TELEPORT_NONE );
 				}
 			}
@@ -1432,9 +1441,9 @@ void render_ui(F32 zoom_factor, int subfield)
     LL_RECORD_BLOCK_TIME(FTM_RENDER_HUD);
     render_hud_elements();
 // [RLVa:KB] - Checked: RLVa-2.2 (@setoverlay)
-		if (gRlvHandler.isEnabled())
+		if (RlvActions::hasBehaviour(RLV_BHVR_SETOVERLAY))
 		{
-			gRlvHandler.renderOverlay();
+			LLVfxManager::instance().runEffect(EVisualEffect::RlvOverlay);
 		}
 // [/RLVa:KB]
 	render_hud_attachments();

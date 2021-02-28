@@ -115,6 +115,7 @@
 #include "llprogressview.h"
 #include "llcleanup.h"
 // [RLVa:KB] - Checked: RLVa-2.0.0
+#include "llvisualeffect.h"
 #include "rlvactions.h"
 #include "rlvlocks.h"
 // [/RLVa:KB]
@@ -185,6 +186,10 @@ bool LLPipeline::RenderDepthOfFieldInEditMode;
 //<FS:TS> FIRE-16251: Depth of field does not work underwater
 bool LLPipeline::FSRenderDepthOfFieldUnderwater;
 //</FS:TS> FIRE-16251
+// <FS:Beq> FIRE-16728 Add free aim mouse and focus lock
+bool LLPipeline::FSFocusPointLocked;
+bool LLPipeline::FSFocusPointFollowsPointer;
+// </FS:Beq>
 F32 LLPipeline::CameraFocusTransitionTime;
 F32 LLPipeline::CameraFNumber;
 F32 LLPipeline::CameraFocalLength;
@@ -342,6 +347,7 @@ bool	LLPipeline::sDelayVBUpdate = true;
 bool	LLPipeline::sAutoMaskAlphaDeferred = true;
 bool	LLPipeline::sAutoMaskAlphaNonDeferred = false;
 bool	LLPipeline::sDisableShaders = false;
+bool	LLPipeline::sRenderTransparentWater = true;
 bool	LLPipeline::sRenderBump = true;
 bool	LLPipeline::sBakeSunlight = false;
 bool	LLPipeline::sNoAlpha = false;
@@ -371,6 +377,9 @@ bool	LLPipeline::sRenderParticles; // <FS:LO> flag to hold correct, user selecte
 // [SL:KB] - Patch: Render-TextureToggle (Catznip-4.0)
 bool	LLPipeline::sRenderTextures = true;
 // [/SL:KB]
+// [RLVa:KB] - @setsphere
+bool	LLPipeline::sUseDepthTexture = false;
+// [/RLVa:KB]
 
 // EventHost API LLPipeline listener.
 static LLPipelineListener sPipelineListener;
@@ -657,6 +666,10 @@ void LLPipeline::init()
 	connectRefreshCachedSettingsSafe("RenderAttachedLights");
 	connectRefreshCachedSettingsSafe("RenderAttachedParticles");
 	// </FS:Ansariel>
+    // <FS:Beq> FIRE-16728 Add free aim mouse and focus lock
+	connectRefreshCachedSettingsSafe("FSFocusPointLocked");
+	connectRefreshCachedSettingsSafe("FSFocusPointFollowsPointer");
+    // </FS:Beq>
 }
 
 LLPipeline::~LLPipeline()
@@ -804,7 +817,10 @@ void LLPipeline::requestResizeShadowTexture()
 void LLPipeline::resizeShadowTexture()
 {
     releaseShadowTargets();
-    allocateShadowBuffer(mScreenWidth, mScreenHeight);
+    // <FS:Beq> FIRE-30538 don;t pass zero screen size to shadow buff allocator
+    // allocateShadowBuffer(mScreenWidth, mScreenHeight);
+    allocateShadowBuffer( mScreen.getWidth(), mScreen.getHeight() );
+    // </FS:Beq>
     gResizeShadowTexture = FALSE;
 }
 
@@ -1043,8 +1059,22 @@ bool LLPipeline::allocateScreenBuffer(U32 resX, U32 resY, U32 samples)
 		mFXAABuffer.release();
 		mScreen.release();
 		mDeferredScreen.release(); //make sure to release any render targets that share a depth buffer with mDeferredScreen first
-		mDeferredDepth.release();
-		mOcclusionDepth.release();
+// [RLVa:KB] - @setsphere
+		if (!LLRenderTarget::sUseFBO || !LLPipeline::sUseDepthTexture)
+		{
+			mDeferredDepth.release();
+			mOcclusionDepth.release();
+		}
+		else
+		{
+			const U32 occlusion_divisor = 3;
+			if (!mDeferredDepth.allocate(resX, resY, 0, TRUE, FALSE, LLTexUnit::TT_RECT_TEXTURE, FALSE, samples)) return false;
+			if (!mOcclusionDepth.allocate(resX / occlusion_divisor, resY / occlusion_divisor, 0, TRUE, FALSE, LLTexUnit::TT_RECT_TEXTURE, FALSE, samples)) return false;
+			if (RlvActions::isRlvEnabled() && !mDeferredLight.allocate(resX, resY, GL_RGBA, FALSE, FALSE, LLTexUnit::TT_RECT_TEXTURE, FALSE)) return false;
+		}
+// [/RLVa:KB]
+//        mDeferredDepth.release();
+//        mOcclusionDepth.release();
 						
 		if (!mScreen.allocate(resX, resY, GL_RGBA, TRUE, TRUE, LLTexUnit::TT_RECT_TEXTURE, FALSE)) return false;		
 	}
@@ -1133,6 +1163,12 @@ bool LLPipeline::allocateShadowBuffer(U32 resX, U32 resY)
 }
 
 //static
+void LLPipeline::updateRenderTransparentWater()
+{
+	sRenderTransparentWater = gSavedSettings.getBOOL("RenderTransparentWater");
+}
+
+//static
 void LLPipeline::updateRenderBump()
 {
 	sRenderBump = gSavedSettings.getBOOL("RenderObjectBump");
@@ -1145,6 +1181,7 @@ void LLPipeline::updateRenderDeferred()
                       RenderDeferred &&
                       LLRenderTarget::sUseFBO &&
                       LLPipeline::sRenderBump &&
+                      LLPipeline::sRenderTransparentWater &&
                       RenderAvatarVP &&
                       WindLightUseAtmosShaders &&
                       (bool) LLFeatureManager::getInstance()->isFeatureAvailable("RenderDeferred");
@@ -1219,6 +1256,10 @@ void LLPipeline::refreshCachedSettings()
 	//<FS:TS> FIRE-16251: Depth of Field does not work underwater
 	FSRenderDepthOfFieldUnderwater = gSavedSettings.getBOOL("FSRenderDoFUnderwater");
 	//</FS:TS> FIRE-16251
+	// <FS:Beq> FIRE-16728 Add free aim mouse and focus lock
+	FSFocusPointLocked = gSavedSettings.getBOOL("FSFocusPointLocked");
+	FSFocusPointFollowsPointer = gSavedSettings.getBOOL("FSFocusPointFollowsPointer");
+	// </FS:Beq>    
 	CameraFocusTransitionTime = gSavedSettings.getF32("CameraFocusTransitionTime");
 	CameraFNumber = gSavedSettings.getF32("CameraFNumber");
 	CameraFocalLength = gSavedSettings.getF32("CameraFocalLength");
@@ -4244,11 +4285,6 @@ void LLPipeline::renderHighlights()
 		glStencilFunc(GL_ALWAYS, 0, 0xFFFFFFFF);
 		glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
 
-        if (canUseVertexShaders())
-        {
-            gHighlightProgram.bind();
-        }
-
 		gGL.setColorMask(false, false);
 
         if (LLGLSLShader::sNoFixedFunction)
@@ -4573,7 +4609,17 @@ void LLPipeline::renderGeom(LLCamera& camera, bool forceVBOUpdate)
 				gGLLastMatrix = NULL;
 				gGL.loadMatrix(gGLModelView);
 				LLGLSLShader::bindNoShader();
-				doOcclusion(camera);
+// [RLVa:KB] - @setsphere
+				if (LLPipeline::RenderDeferred || !LLRenderTarget::sUseFBO || !LLPipeline::sUseDepthTexture)
+				{
+					doOcclusion(camera);
+				}
+				else
+				{
+					doOcclusion(camera, mScreen, mOcclusionDepth, &mDeferredDepth);
+				}
+// [/RLVa:KB]
+//				doOcclusion(camera);
 			}
 
 			pool_set_t::iterator iter2 = iter1;
@@ -6199,25 +6245,18 @@ static F32 calc_light_dist(LLVOVolume* light, const LLVector3& cam_pos, F32 max_
 	{
 		return max_dist;
 	}
-	F32 radius = light->getLightRadius();
 	bool selected = light->isSelected();
-	LLVector3 dpos = light->getRenderPosition() - cam_pos;
-	F32 dist2 = dpos.lengthSquared();
-	if (!selected && dist2 > (max_dist + radius)*(max_dist + radius))
-	{
-		return max_dist;
-	}
-	F32 dist = (F32) sqrt(dist2);
-	dist *= 1.f / inten;
-	dist -= radius;
 	if (selected)
 	{
-		dist -= 10000.f; // selected lights get highest priority
+        return 0.f; // selected lights get highest priority
 	}
+    F32 radius = light->getLightRadius();
+    F32 dist = dist_vec(light->getRenderPosition(), cam_pos);
+    dist = llmax(dist - radius, 0.f);
 	if (light->mDrawable.notNull() && light->mDrawable->isState(LLDrawable::ACTIVE))
 	{
 		// moving lights get a little higher priority (too much causes artifacts)
-		dist -= light->getLightRadius()*0.25f;
+        dist = llmax(dist - light->getLightRadius()*0.25f, 0.f);
 	}
 	return dist;
 }
@@ -6236,13 +6275,18 @@ void LLPipeline::calcNearbyLights(LLCamera& camera)
 		// mNearbyLight (and all light_set_t's) are sorted such that
 		// begin() == the closest light and rbegin() == the farthest light
 		const S32 MAX_LOCAL_LIGHTS = 6;
-// 		LLVector3 cam_pos = gAgent.getCameraPositionAgent();
-		LLVector3 cam_pos = LLViewerJoystick::getInstance()->getOverrideCamera() ?
-						camera.getOrigin() : 
-						gAgent.getPositionAgent();
-
-		F32 max_dist = LIGHT_MAX_RADIUS * 4.f; // ignore enitrely lights > 4 * max light rad
+        LLVector3 cam_pos = camera.getOrigin();
 		
+        F32 max_dist;
+        if (LLPipeline::sRenderDeferred)
+        {
+            max_dist = RenderFarClip;
+        }
+        else
+        {
+            max_dist = llmin(RenderFarClip, LIGHT_MAX_RADIUS * 4.f);
+        }
+
 		// UPDATE THE EXISTING NEARBY LIGHTS
 		light_set_t cur_nearby_lights;
 		for (light_set_t::iterator iter = mNearbyLights.begin();
@@ -6276,8 +6320,38 @@ void LLPipeline::calcNearbyLights(LLCamera& camera)
 				continue;
 			}
 
-			F32 dist = calc_light_dist(volight, cam_pos, max_dist);
-			cur_nearby_lights.insert(Light(drawable, dist, light->fade));
+            F32 dist = calc_light_dist(volight, cam_pos, max_dist);
+            F32 fade = light->fade;
+            // actual fade gets decreased/increased by setupHWLights
+            // light->fade value is 'time'.
+            // >=0 and light will become visible as value increases
+            // <0 and light will fade out
+            if (dist < max_dist)
+            {
+                if (fade < 0)
+                {
+                    // mark light to fade in
+                    // if fade was -LIGHT_FADE_TIME - it was fully invisible
+                    // if fade -0 - it was fully visible
+                    // visibility goes up from 0 to LIGHT_FADE_TIME.
+                    fade += LIGHT_FADE_TIME;
+                }
+            }
+            else
+            {
+                // mark light to fade out
+                // visibility goes down from -0 to -LIGHT_FADE_TIME.
+                if (fade >= LIGHT_FADE_TIME)
+                {
+                    fade = -0.0001f; // was fully visible
+                }
+                else if (fade >= 0)
+                {
+                    // 0.75 visible light should stay 0.75 visible, but should reverse direction
+                    fade -= LIGHT_FADE_TIME;
+                }
+            }
+            cur_nearby_lights.insert(Light(drawable, dist, fade));
 		}
 		mNearbyLights = cur_nearby_lights;
 				
@@ -6296,17 +6370,23 @@ void LLPipeline::calcNearbyLights(LLCamera& camera)
 			{
 				continue; // no lighting from HUD objects
 			}
-			F32 dist = calc_light_dist(light, cam_pos, max_dist);
-			if (dist >= max_dist)
+            if (!sRenderAttachedLights && light && light->isAttachment())
 			{
 				continue;
 			}
-			if (!sRenderAttachedLights && light && light->isAttachment())
+            LLVOAvatar * av = light->getAvatar();
+            if (av && (av->isTooComplex() || av->isInMuteList()))
+            {
+                // avatars that are already in the list will be removed by removeMutedAVsLights
+                continue;
+            }
+            F32 dist = calc_light_dist(light, cam_pos, max_dist);
+            if (dist >= max_dist)
 			{
 				continue;
 			}
 			new_nearby_lights.insert(Light(drawable, dist, 0.f));
-			if (new_nearby_lights.size() > (U32)MAX_LOCAL_LIGHTS)
+            if (!LLPipeline::sRenderDeferred && new_nearby_lights.size() > (U32)MAX_LOCAL_LIGHTS)
 			{
 				new_nearby_lights.erase(--new_nearby_lights.end());
 				const Light& last = *new_nearby_lights.rbegin();
@@ -6319,7 +6399,7 @@ void LLPipeline::calcNearbyLights(LLCamera& camera)
 			 iter != new_nearby_lights.end(); iter++)
 		{
 			const Light* light = &(*iter);
-			if (mNearbyLights.size() < (U32)MAX_LOCAL_LIGHTS)
+            if (LLPipeline::sRenderDeferred || mNearbyLights.size() < (U32)MAX_LOCAL_LIGHTS)
 			{
 				mNearbyLights.insert(*light);
 				((LLDrawable*) light->drawable)->setState(LLDrawable::NEARBY_LIGHT);
@@ -6332,10 +6412,22 @@ void LLPipeline::calcNearbyLights(LLCamera& camera)
 				Light* farthest_light = (const_cast<Light*>(&(*(mNearbyLights.rbegin()))));
 				if (light->dist < farthest_light->dist)
 				{
-					if (farthest_light->fade >= 0.f)
-					{
-						farthest_light->fade = -(gFrameIntervalSeconds.value());
-					}
+                    // mark light to fade out
+                    // visibility goes down from -0 to -LIGHT_FADE_TIME.
+                    //
+                    // This is a mess, but for now it needs to be in sync
+                    // with fade code above. Ex: code above detects distance < max,
+                    // sets fade time to positive, this code then detects closer
+                    // lights and sets fade time negative, fully compensating
+                    // for the code above
+                    if (farthest_light->fade >= LIGHT_FADE_TIME)
+                    {
+                        farthest_light->fade = -0.0001f; // was fully visible
+                    }
+                    else if (farthest_light->fade >= 0)
+                    {
+                        farthest_light->fade -= LIGHT_FADE_TIME;
+                    }
 				}
 				else
 				{
@@ -6453,12 +6545,6 @@ void LLPipeline::setupHWLights(LLDrawPool* pool)
                 {
                     continue;
                 }
-            }
-
-            const LLViewerObject *vobj = drawable->getVObj();
-            if(vobj && vobj->getAvatar() && vobj->getAvatar()->isInMuteList())
-            {
-                continue;
             }
 
 			if (drawable->isState(LLDrawable::ACTIVE))
@@ -7840,6 +7926,9 @@ void LLPipeline::renderFinalize()
 
     LLVertexBuffer::unbind();
 
+// [RLVa:KB] - @setsphere
+	LLRenderTarget* pRenderBuffer = (RlvActions::hasBehaviour(RLV_BHVR_SETSPHERE)) ? &mDeferredLight : nullptr;
+// [/RLVa:KB]
     if (LLPipeline::sRenderDeferred)
     {
 
@@ -7852,6 +7941,12 @@ void LLPipeline::renderFinalize()
 
         bool multisample = RenderFSAASamples > 1 && mFXAABuffer.isComplete();
         exoPostProcess::instance().multisample = multisample;	// <FS:CR> Import Vignette from Exodus
+// [RLVa:KB] - @setsphere
+		if (multisample && !pRenderBuffer)
+		{
+			pRenderBuffer = &mDeferredLight;
+		}
+// [/RLVa:KB]
 
         gViewerWindow->setup3DViewport();
 
@@ -7867,6 +7962,15 @@ void LLPipeline::renderFinalize()
 
             LLVector3 focus_point;
 
+            // <FS:Beq> FIRE-16728 focus point lock & free focus DoF - based on a feature developed by NiranV Dean
+            static LLVector3 last_focus_point{};
+            if( LLPipeline::FSFocusPointLocked && !last_focus_point.isExactlyZero() )
+            {
+                focus_point = last_focus_point;
+            }
+            else
+            {
+            // </FS:Beq>
             LLViewerObject *obj = LLViewerMediaFocus::getInstance()->getFocusedObject();
             if (obj && obj->mDrawable && obj->isSelected())
             { // focus on selected media object
@@ -7880,10 +7984,11 @@ void LLPipeline::renderFinalize()
                     }
                 }
             }
+            }// <FS:Beq/> support focus point lock
 
             if (focus_point.isExactlyZero())
             {
-                if (LLViewerJoystick::getInstance()->getOverrideCamera())
+                if (LLViewerJoystick::getInstance()->getOverrideCamera() || LLPipeline::FSFocusPointFollowsPointer) // <FS:Beq/> FIRE-16728 Add free aim mouse and focus lock
                 { // focus on point under cursor
                     focus_point.set(gDebugRaycastIntersection.getF32ptr());
                 }
@@ -7906,7 +8011,9 @@ void LLPipeline::renderFinalize()
                     }
                 }
             }
-
+            // <FS:Beq> FIRE-16728 Add free aim mouse and focus lock
+            last_focus_point = focus_point;
+            // </FS:Beq>
             LLVector3 eye = LLViewerCamera::getInstance()->getOrigin();
             F32 target_distance = 16.f;
             if (!focus_point.isExactlyZero())
@@ -8038,11 +8145,18 @@ void LLPipeline::renderFinalize()
             }
 
             { // combine result based on alpha
-                if (multisample)
+//                if (multisample)
+//                {
+//                    mDeferredLight.bindTarget();
+//                    glViewport(0, 0, mDeferredScreen.getWidth(), mDeferredScreen.getHeight());
+//                }
+// [RLVa:KB] - @setsphere
+                if (pRenderBuffer)
                 {
-                    mDeferredLight.bindTarget();
+					pRenderBuffer->bindTarget();
                     glViewport(0, 0, mDeferredScreen.getWidth(), mDeferredScreen.getHeight());
                 }
+// [/RLVa:KB]
                 else
                 {
                     gGLViewport[0] = gViewerWindow->getWorldViewRectRaw().mLeft;
@@ -8083,18 +8197,30 @@ void LLPipeline::renderFinalize()
 
                 unbindDeferredShader(*shader);
 
-                if (multisample)
+// [RLVa:KB] - @setsphere
+                if (pRenderBuffer)
                 {
-                    mDeferredLight.flush();
+                    pRenderBuffer->flush();
                 }
+// [/RLVa:KB]
+//                if (multisample)
+//                {
+//                    mDeferredLight.flush();
+//                }
             }
         }
         else
         {
-            if (multisample)
+//            if (multisample)
+//            {
+//                mDeferredLight.bindTarget();
+//            }
+// [RLVa:KB] - @setsphere
+            if (pRenderBuffer)
             {
-                mDeferredLight.bindTarget();
+				pRenderBuffer->bindTarget();
             }
+// [/RLVa:KB]
             LLGLSLShader *shader = &gDeferredPostNoDoFProgram;
 
             bindDeferredShader(*shader);
@@ -8122,11 +8248,26 @@ void LLPipeline::renderFinalize()
 
             unbindDeferredShader(*shader);
 
-            if (multisample)
+// [RLVa:KB] - @setsphere
+            if (pRenderBuffer)
             {
-                mDeferredLight.flush();
+				pRenderBuffer->flush();
             }
+// [/RLVa:KB]
+//            if (multisample)
+//            {
+//                mDeferredLight.flush();
+//            }
         }
+
+// [RLVa:KB] - @setsphere
+		if (RlvActions::hasBehaviour(RLV_BHVR_SETSPHERE))
+		{
+			LLShaderEffectParams params(pRenderBuffer, &mScreen, !multisample);
+			LLVfxManager::instance().runEffect(EVisualEffect::RlvSphere, &params);
+			pRenderBuffer = params.m_pDstBuffer;
+		}
+// [/RLVa:KB]
 
         if (multisample)
         {
@@ -8142,11 +8283,18 @@ void LLPipeline::renderFinalize()
             shader->bind();
             shader->uniform2f(LLShaderMgr::DEFERRED_SCREEN_RES, width, height);
 
-            S32 channel = shader->enableTexture(LLShaderMgr::DEFERRED_DIFFUSE, mDeferredLight.getUsage());
+//            S32 channel = shader->enableTexture(LLShaderMgr::DEFERRED_DIFFUSE, mDeferredLight.getUsage());
+//            if (channel > -1)
+//            {
+//                mDeferredLight.bindTexture(0, channel);
+//            }
+// [RLVa:KB] - @setsphere
+			S32 channel = shader->enableTexture(LLShaderMgr::DEFERRED_DIFFUSE, pRenderBuffer->getUsage());
             if (channel > -1)
             {
-                mDeferredLight.bindTexture(0, channel);
+				pRenderBuffer->bindTexture(0, channel);
             }
+// [RLVa:KB]
 
             // <FS:Ansariel> FIRE-16829: Visual Artifacts with ALM enabled on AMD graphics
             //gGL.begin(LLRender::TRIANGLE_STRIP);
@@ -8159,7 +8307,10 @@ void LLPipeline::renderFinalize()
             drawAuxiliaryVB();
             // </FS:Ansariel>
 
-            shader->disableTexture(LLShaderMgr::DEFERRED_DIFFUSE, mDeferredLight.getUsage());
+// [RLVa:KB] - @setsphere
+            shader->disableTexture(LLShaderMgr::DEFERRED_DIFFUSE, pRenderBuffer->getUsage());
+// [/RLVa:KB]
+//            shader->disableTexture(LLShaderMgr::DEFERRED_DIFFUSE, mDeferredLight.getUsage());
             shader->unbind();
 
             mFXAABuffer.flush();
@@ -8203,6 +8354,15 @@ void LLPipeline::renderFinalize()
     }
     else // not deferred
     {
+// [RLVa:KB] - @setsphere
+		if (RlvActions::hasBehaviour(RLV_BHVR_SETSPHERE))
+		{
+			LLShaderEffectParams params(&mScreen, &mDeferredLight, false);
+			LLVfxManager::instance().runEffect(EVisualEffect::RlvSphere, &params);
+			pRenderBuffer = params.m_pDstBuffer;
+		}
+// [/RLVa:KB]
+
         U32 mask = LLVertexBuffer::MAP_VERTEX | LLVertexBuffer::MAP_TEXCOORD0 | LLVertexBuffer::MAP_TEXCOORD1;
         LLPointer<LLVertexBuffer> buff = new LLVertexBuffer(mask, 0);
         buff->allocateBuffer(3, 0, TRUE);
@@ -8245,7 +8405,10 @@ void LLPipeline::renderFinalize()
         }
 
         gGL.getTexUnit(0)->bind(&mGlow[1]);
-        gGL.getTexUnit(1)->bind(&mScreen);
+// [RLVa:KB] - @setsphere
+        gGL.getTexUnit(1)->bind( pRenderBuffer ? pRenderBuffer : &mScreen );
+// [/RLVa:KB]
+//        gGL.getTexUnit(1)->bind(&mScreen);
 
         LLGLEnable multisample(RenderFSAASamples > 0 ? GL_MULTISAMPLE_ARB : 0);
 
@@ -8881,11 +9044,13 @@ void LLPipeline::renderDeferredLighting(LLRenderTarget *screen_target)
                 mCubeVB->setBuffer(LLVertexBuffer::MAP_VERTEX);
 
                 LLGLDepthTest depth(GL_TRUE, GL_FALSE);
-                for (LLDrawable::drawable_set_t::iterator iter = mLights.begin(); iter != mLights.end(); ++iter)
+                // mNearbyLights already includes distance calculation and excludes muted avatars.
+                // It is calculated from mLights
+                // mNearbyLights also provides fade value to gracefully fade-out out of range lights
+                for (light_set_t::iterator iter = mNearbyLights.begin(); iter != mNearbyLights.end(); ++iter)
                 {
-                    LLDrawable *drawablep = *iter;
-
-                    LLVOVolume *volume = drawablep->getVOVolume();
+                    LLDrawable * drawablep = iter->drawable;
+                    LLVOVolume * volume = drawablep->getVOVolume();
                     if (!volume)
                     {
                         continue;
@@ -8899,24 +9064,8 @@ void LLPipeline::renderDeferredLighting(LLRenderTarget *screen_target)
                         }
                     }
 
-                    const LLViewerObject *vobj = drawablep->getVObj();
-                    if (vobj)
-                    {
-                        LLVOAvatar *av = vobj->getAvatar();
-                        if (av && (av->isTooComplex() || av->isInMuteList()))
-                        {
-                            continue;
-                        }
-                    }
-
-                    const LLVector3 position = drawablep->getPositionAgent();
-                    if (dist_vec(position, LLViewerCamera::getInstance()->getOrigin()) > RenderFarClip + volume->getLightRadius())
-                    {
-                        continue;
-                    }
-
                     LLVector4a center;
-                    center.load3(position.mV);
+                    center.load3(drawablep->getPositionAgent().mV);
                     const F32 *c = center.getF32ptr();
                     F32        s = volume->getLightRadius() * 1.5f;
 
@@ -9591,7 +9740,7 @@ void LLPipeline::generateWaterReflection(LLCamera& camera_in)
         //LLPipeline::sUseOcclusion = occlusion;
 		// <FS:Ansariel> Add option to allow object occlusion for water distortion generation
 		static LLCachedControl<bool> fsAllowWaterDistortionOcclusion(gSavedSettings, "FSAllowWaterDistortionOcclusion");
-		LLPipeline::sUseOcclusion = fsAllowWaterDistortionOcclusion && occlusion;
+		LLPipeline::sUseOcclusion = fsAllowWaterDistortionOcclusion ? occlusion : 0;
 		// </FS:Ansariel>
 
 		camera.setOrigin(camera_in.getOrigin());

@@ -229,6 +229,8 @@
 #include "llviewermenufile.h"
 
 // [RLVa:KB] - Checked: 2010-03-31 (RLVa-1.2.0c)
+#include "rlvactions.h"
+#include "rlveffects.h"
 #include "rlvhandler.h"
 // [/RLVa:KB]
 
@@ -372,6 +374,12 @@ public:
 
 	void update()
 	{
+		if (!gPipeline.hasRenderDebugFeatureMask(LLPipeline::RENDER_DEBUG_FEATURE_UI))
+		{
+			clearText();
+			return;
+		}
+
 		static LLCachedControl<bool> log_texture_traffic(gSavedSettings,"LogTextureNetworkTraffic", false) ;
 
 		std::string wind_vel_text;
@@ -483,6 +491,15 @@ public:
 			camera_view_text = llformat("CameraAtAxis    %f %f %f",
 										(F32)(tvector.mdV[VX]), (F32)(tvector.mdV[VY]), (F32)(tvector.mdV[VZ]));
 		
+// [RLVa:KB] - @showloc
+			if (!RlvActions::canShowLocation())
+			{
+				agent_center_text = RlvStrings::getString(RlvStringKeys::Hidden::Generic);
+				agent_root_center_text = RlvStrings::getString(RlvStringKeys::Hidden::Generic);
+				camera_center_text = RlvStrings::getString(RlvStringKeys::Hidden::Generic);
+			}
+// [/RLVa:KB]
+
 			addText(xpos, ypos, agent_center_text);  ypos += y_inc;
 			addText(xpos, ypos, agent_root_center_text);  ypos += y_inc;
 			addText(xpos, ypos, agent_view_text);  ypos += y_inc;
@@ -2595,7 +2612,7 @@ void LLViewerWindow::shutdownGL()
 LLViewerWindow::~LLViewerWindow()
 {
 	LL_INFOS() << "Destroying Window" << LL_ENDL;
-	gDebugWindowProc = TRUE; // event catching, at this point it shouldn't output at all
+	gDebugWindowProc = TRUE; // event catching, disable once we figure out cause for exit crashes
 	destroyWindow();
 
 	delete mDebugText;
@@ -5288,7 +5305,7 @@ LLViewerObject* LLViewerWindow::cursorIntersect(S32 mouse_x, S32 mouse_y, F32 de
 	LLVector3 mouse_world_start = mouse_point_global;
 	LLVector3 mouse_world_end   = mouse_point_global + mouse_direction_global * depth;
 
-	if (!LLViewerJoystick::getInstance()->getOverrideCamera())
+	if (!LLViewerJoystick::getInstance()->getOverrideCamera() && !gPipeline.FSFocusPointFollowsPointer) // <FS:Beq> FIRE-16728 Add free aim mouse and focus lock
 	{ //always set raycast intersection to mouse_world_end unless
 		//flycam is on (for DoF effect)
 		gDebugRaycastIntersection.load3(mouse_world_end.mV);
@@ -5922,7 +5939,10 @@ BOOL LLViewerWindow::rawSnapshot(LLImageRaw *raw, S32 image_width, S32 image_hei
 		if ((image_width <= gGLManager.mGLMaxTextureSize && image_height <= gGLManager.mGLMaxTextureSize) && 
 			(image_width > window_width || image_height > window_height) && LLPipeline::sRenderDeferred && !show_ui)
 		{
-			U32 color_fmt = type == LLSnapshotModel::SNAPSHOT_TYPE_DEPTH ? GL_DEPTH_COMPONENT : GL_RGBA;
+			// <FS:Ansariel> FIRE-15667: 24bit depth maps
+			//U32 color_fmt = type == LLSnapshotModel::SNAPSHOT_TYPE_DEPTH ? GL_DEPTH_COMPONENT : GL_RGBA;
+			U32 color_fmt = (type == LLSnapshotModel::SNAPSHOT_TYPE_DEPTH || type == LLSnapshotModel::SNAPSHOT_TYPE_DEPTH24) ? GL_DEPTH_COMPONENT : GL_RGBA;
+			// </FS:Ansariel>
 			if (scratch_space.allocate(image_width, image_height, color_fmt, true, true))
 			{
 				original_width = gPipeline.mDeferredScreen.getWidth();
@@ -6899,7 +6919,8 @@ void LLViewerWindow::setUIVisibility(bool visible)
 	FSNearbyChat::instance().showDefaultChatBar(visible && !gSavedSettings.getBOOL("AutohideChatBar"));
 	gSavedSettings.setBOOL("FSInternalShowNavbarNavigationPanel", visible && gSavedSettings.getBOOL("ShowNavbarNavigationPanel"));
 	gSavedSettings.setBOOL("FSInternalShowNavbarFavoritesPanel", visible && gSavedSettings.getBOOL("ShowNavbarFavoritesPanel"));
-	mRootView->getChildView("chiclet_container")->setVisible(visible);
+	mRootView->getChildView("chiclet_container")->setVisible(visible && gSavedSettings.getBOOL("InternalShowGroupNoticesTopRight"));
+	mRootView->getChildView("chiclet_container_bottom")->setVisible(visible && !gSavedSettings.getBOOL("InternalShowGroupNoticesTopRight"));
 	// </FS:Ansariel>
 
 	// <FS:Zi> Is done inside XUI now, using visibility_control
@@ -7004,11 +7025,12 @@ void LLPickInfo::fetchResults()
 	mPickPt = mMousePt;
 
 // [RLVa:KB] - Checked: RLVa-2.2 (@setoverlay)
-	if ( (gRlvHandler.isEnabled()) && (hit_object) && (!hit_object->isHUDAttachment()) )
+	if ( (RlvActions::hasBehaviour(RLV_BHVR_SETOVERLAY)) && (hit_object) && (!hit_object->isHUDAttachment()) )
 	{
-		if (gRlvHandler.hitTestOverlay(mMousePt))
+		if (auto* pOverlayEffect = LLVfxManager::instance().getEffect<RlvOverlayEffect>(EVisualEffect::RlvOverlay))
 		{
-			hit_object = nullptr;
+			if (pOverlayEffect->hitTest(mMousePt))
+				hit_object = nullptr;
 		}
 	}
 // [/RLVa:KB]

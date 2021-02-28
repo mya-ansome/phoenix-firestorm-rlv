@@ -204,6 +204,12 @@ void LLHandlerUtil::logToIMP2P(const LLNotificationPtr& notification, bool to_fi
 void LLHandlerUtil::logGroupNoticeToIMGroup(
 		const LLNotificationPtr& notification)
 {
+	// <FS:Ansariel> FIRE-11339: Persisted group notifications get logged to IM on each login
+	if (notification->isFromStorage())
+	{
+		return;
+	}
+	// </FS:Ansariel>
 
 	const LLSD& payload = notification->getPayload();
 	LLGroupData groupData;
@@ -318,7 +324,10 @@ std::string LLHandlerUtil::getSubstitutionName(const LLNotificationPtr& notifica
 			from_id = notification->getPayload()["from_id"];
 		}
 		LLAvatarName av_name;
-		if(LLAvatarNameCache::get(from_id, &av_name))
+		// <FS:Beq> Avoid null UUID name cache requests
+		// if(LLAvatarNameCache::get(from_id, &av_name))
+		if( from_id.notNull() && LLAvatarNameCache::get(from_id, &av_name) )
+		// </FS:Beq>
 		{
 			res = av_name.getUserName();
 		}

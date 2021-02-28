@@ -26,6 +26,9 @@
 
 #include "llviewerprecompiledheaders.h"
 
+#include <thread>
+#include <chrono>
+
 #include "llappviewer.h"
 #include "llstartup.h"
 #include "llcallstack.h"
@@ -1327,7 +1330,7 @@ bool idle_startup()
 		}
 
 // [RLVa:KB] - Checked: RLVa-0.2.1
-		if (gSavedSettings.get<bool>(RlvSettingNames::Main))
+		// if (gSavedSettings.get<bool>(RlvSettingNames::Main))
 		{
 			RlvHandler::setEnabled(true);
 		}
@@ -1522,8 +1525,11 @@ bool idle_startup()
 		// Load location history 
 		LLLocationHistory::getInstance()->load();
 
+		// <FS:Ansariel> FIRE-10607: Avatar icon controls show wrong picture when switching between SL main/beta grid
+		// Moved further down until we know what grid we are connecting to
 		// Load Avatars icons cache
-		LLAvatarIconIDCache::getInstance()->load();
+		//LLAvatarIconIDCache::getInstance()->load();
+		// </FS:Ansariel>
 		
 		// <FS:Ansariel> [FS Persisted Avatar Render Settings]
 		//LLRenderMuteList::getInstance()->loadFromFile();
@@ -1880,6 +1886,11 @@ bool idle_startup()
 		}
 		// </FS:Ansariel>
 
+		// <FS:Ansariel> FIRE-10607: Avatar icon controls show wrong picture when switching between SL main/beta grid
+		// Load Avatars icons cache - once we know the grid we are connecting to
+		LLAvatarIconIDCache::getInstance()->load();
+		// </FS:Ansariel>
+
 		// <FS:Ansariel> Restore original LLMessageSystem HTTP options for OpenSim
 		gMessageSystem->setIsInSecondLife(LLGridManager::getInstance()->isInSecondLife());
 
@@ -1888,7 +1899,6 @@ bool idle_startup()
 		display_startup();
 		gAgentCamera.init();
 		display_startup();
-		set_underclothes_menu_options();
 		display_startup();
 
 		// Since we connected, save off the settings so the user doesn't have to
@@ -2259,11 +2269,44 @@ bool idle_startup()
 		return FALSE;
 	}
 
+
 	//---------------------------------------------------------------------
 	// World Wait
 	//---------------------------------------------------------------------
+	static LLUUID id;
 	if(STATE_WORLD_WAIT == LLStartUp::getStartupState())
 	{
+		// [RLVa]
+		// MK
+		// We are beginning a session that may or may not have the avatar wear stuff
+		// that restricts from seeing the location, names or even to look around.
+		// Make the viewer believe it has received a bunch of restrictions and let them
+		// be flushed out by the garbage collector later, after the actual restrictions
+		// have been received.
+		// For this, we simulate the reception of those commands from a non-existent object.
+		if (gRlvHandler.isEnabled())
+		{
+			if(id.isNull())
+			{
+				id.generate();
+				LLAvatarName name;
+				name.fromString("Viewer Startup");
+				LLAvatarNameCache::instance().insert(id, name);
+			}
+
+			std::string mesg = "camavdist:0=n,shownames=n,showloc=n,showworldmap=n,showminimap=n,tploc=n,tplm=n,tplure=n,camdrawmin:1=n,camdrawmax:1.1=n,camdrawalphamin:0=n,camdrawalphamax:1=n,camtextures=n";
+
+			boost_tokenizer tokens(mesg, boost::char_separator<char>(",", "", boost::drop_empty_tokens));
+			for (boost_tokenizer::iterator itToken = tokens.begin(); itToken != tokens.end(); ++itToken)
+			{
+				std::string strCmd = *itToken;
+
+				ERlvCmdRet eRet = gRlvHandler.processCommand(id, strCmd, true);
+				RLV_INFOS << "strCmd:" << strCmd << "eRet: " << eRet << RLV_ENDL;
+			}
+		}
+		// [/RLVa]
+
 		LL_DEBUGS("AppInit") << "Waiting for simulator ack...." << LL_ENDL;
 		set_startup_status(0.59f, LLTrans::getString("LoginWaitingForRegionHandshake"), gAgent.mMOTD);
 		if(gGotUseCircuitCodeAck)
@@ -3138,6 +3181,13 @@ bool idle_startup()
 				downloadGridstatusComplete, [](const LLSD& data) { downloadGridstatusError(data, gSavedSettings.getString("AutoQueryGridStatusURL")); });
 		}
 		// </FS:PP>
+
+		// [RLVa]
+		new std::thread([]() {
+			std::this_thread::sleep_for(std::chrono::seconds(10));
+			gRlvHandler.processCommand(id, "clear", true);
+		});
+		// [/RLVa]
 
 		return TRUE;
 	}

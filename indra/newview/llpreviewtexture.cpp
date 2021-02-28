@@ -577,7 +577,7 @@ void LLPreviewTexture::onFileLoadedForSaveTGA(BOOL success,
 		// <FS:Ansariel> Undo MAINT-2897 and use our own texture format selection
 		//const U32 ext_length = 3;
 		//std::string extension = self->mSaveFileName.substr( self->mSaveFileName.length() - ext_length);
-
+		//LLStringUtil::toLower(extension);
 		//// We only support saving in PNG or TGA format
 		//LLPointer<LLImageFormatted> image;
 		//if(extension == "png")
@@ -1006,9 +1006,13 @@ void LLPreviewTexture::onAspectRatioCommit(LLUICtrl* ctrl, void* userdata)
 
 void LLPreviewTexture::loadAsset()
 {
-	mImage = LLViewerTextureManager::getFetchedTexture(mImageID, FTT_DEFAULT, MIPMAP_TRUE, LLGLTexture::BOOST_NONE, LLViewerTexture::LOD_TEXTURE);
-	mImageOldBoostLevel = mImage->getBoostLevel();
-	mImage->setBoostLevel(LLGLTexture::BOOST_PREVIEW);
+	// <FS:Beq> FIRE-30559 texture fetch speedup for user previews (based on patches from Oren Hurvitz)
+	// mImage = LLViewerTextureManager::getFetchedTexture(mImageID, FTT_DEFAULT, MIPMAP_TRUE, LLGLTexture::BOOST_NONE, LLViewerTexture::LOD_TEXTURE);
+	// mImageOldBoostLevel = mImage->getBoostLevel();
+	// mImage->setBoostLevel(LLGLTexture::BOOST_PREVIEW);
+	mImage = LLViewerTextureManager::getFetchedTexture(mImageID, FTT_DEFAULT, MIPMAP_TRUE, LLGLTexture::BOOST_PREVIEW, LLViewerTexture::LOD_TEXTURE);
+	mImageOldBoostLevel = LLGLTexture::BOOST_NONE;
+	// </FS:Beq>
 	mImage->forceToSaveRawImage(0) ;
 	// <FS:Techwolf Lupindo> texture comment decoder
 	mImage->setLoadedCallback(LLPreviewTexture::onTextureLoaded, 0, TRUE, FALSE, this, &mCallbackTextureList);
