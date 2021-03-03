@@ -983,7 +983,7 @@ void LLDrawable::updateTexture()
 
 BOOL LLDrawable::updateGeometry(BOOL priority)
 {
-	llassert(mVObjp.notNull());
+	llassert(mVObjp.notNull()); //BUG: crash mVObjp == NULL
 	BOOL res = mVObjp->updateGeometry(this);
 	return res;
 }

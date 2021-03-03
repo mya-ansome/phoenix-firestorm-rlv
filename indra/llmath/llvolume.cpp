@@ -6624,11 +6624,11 @@ BOOL LLVolumeFace::createSide(LLVolume* volume, BOOL partial_build)
 				// Get s value for tex-coord.
 				if (!flat)
 				{
-					ss = profile[mBeginS + s][2];
+					ss = profile[mBeginS + s][2]; // BUG: crashing here array out of bound
 				}
 				else
 				{
-					ss = profile[mBeginS + s][2] - begin_stex;
+					ss = profile[mBeginT + s][2] - begin_stex;// BUG: crashing here array out of bound
 				}
 			}
 
