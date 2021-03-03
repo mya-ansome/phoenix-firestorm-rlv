@@ -368,7 +368,7 @@ void LLDrawPoolWater::renderOpaqueLegacyWater()
 			shader = &gObjectSimpleNonIndexedTexGenProgram;
 		}
 		//Ma RLV dissable the shader if the vision is restricted
-		if (!RlvActions::isCameraDistanceClamped())
+		// if (!RlvActions::isCameraDistanceClamped())
 			shader->bind();
 	}
 
