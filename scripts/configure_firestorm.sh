@@ -561,7 +561,7 @@ if [ $WANTS_BUILD -eq $TRUE ] ; then
     elif [ $TARGET_PLATFORM == "windows" ] ; then
         msbuild.exe Firestorm.sln /p:Configuration=${BTYPE} /flp:LogFile="logs\\FirestormBuild_win-${AUTOBUILD_ADDRSIZE}.log" \
                     /flp1:"errorsonly;LogFile=logs\\FirestormBuild_win-${AUTOBUILD_ADDRSIZE}.err" /p:Platform=${AUTOBUILD_WIN_VSPLATFORM} /t:Build /p:useenv=true \
-                    /verbosity:normal /toolsversion:15.0 /p:"VCBuildAdditionalOptions= /incremental"
+                    /verbosity:normal /toolsversion:Current /p:"VCBuildAdditionalOptions= /incremental"
     fi
 fi
 
