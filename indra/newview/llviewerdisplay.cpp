@@ -1438,8 +1438,9 @@ void render_ui(F32 zoom_factor, int subfield)
 		}
 //mk
 
-    LL_RECORD_BLOCK_TIME(FTM_RENDER_HUD);
-    render_hud_elements();
+	{// <FS:Beq/> give unique scope 
+		LL_RECORD_BLOCK_TIME(FTM_RENDER_HUD);
+    	render_hud_elements();
 // [RLVa:KB] - Checked: RLVa-2.2 (@setoverlay)
 		if (RlvActions::hasBehaviour(RLV_BHVR_SETOVERLAY))
 		{
@@ -1447,7 +1448,7 @@ void render_ui(F32 zoom_factor, int subfield)
 		}
 // [/RLVa:KB]
 	render_hud_attachments();
-
+	} // <FS:Beq/> unique scope
 	LLGLSDefault gls_default;
 	LLGLSUIDefault gls_ui;
 	{
