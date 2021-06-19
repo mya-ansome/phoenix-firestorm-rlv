@@ -60,8 +60,9 @@ SLURL: &lt;nolink&gt;[SLURL]&lt;/nolink&gt;
 [SERVER_RELEASE_NOTES_URL]
 	</string>
 	<string name="AboutSystem">
-		CPU: [CPU]
+Процессор: [CPU]
 Память RAM: [MEMORY_MB] МБ
+Потоки декодирования изображений: [CONCURRENCY]
 Версия ОС: [OS_VERSION]
 Производитель видеокарты: [GRAPHICS_CARD_VENDOR]
 Видеокарта: [GRAPHICS_CARD]
@@ -850,7 +851,7 @@ support@secondlife.com.
 	</string>
 	<string name="AssetUploadRequestInvalid">
 Ошибка в запросе на загрузку.  Пожалуйста, посетите
-http://www.firestormviewer.org/support за помощь в решении этой проблемы.
+https://www.firestormviewer.org/support за помощь в решении этой проблемы.
 	</string>
 	<string name="SettingValidationError">
 		Ошибка при импорте настроек [NAME]
