@@ -133,7 +133,7 @@ class LLDiskCache :
 
         // <FS:Beq>
         // copy from distribution into cache to replace static content
-        void LLDiskCache::prepopulateCacheWithStatic(const std::string& from_folder);
+        void prepopulateCacheWithStatic(const std::string& from_folder);
         // </FS:Beq>
 
         /**
@@ -196,6 +196,8 @@ class LLDiskCache :
          * various parts of the code
          */
         bool mEnableCacheDebugInfo;
+        
+        std::vector<std::string> mSkipList;  // <FS:Beq/> Vector of "static" untouchable assets that should never be purged
 };
 
 // <FS:Ansariel> Regular disk cache cleanup
