@@ -8,6 +8,7 @@
 *.rej
 *.swp
 *.tar.bz2
+*.code-workspace
 *~
 
 # Specific paths and/or names
@@ -109,3 +110,4 @@ compile_commands.json
 # ignore tracy for now
 indra/tracy
 Release*
+firestorm.code-workspace
