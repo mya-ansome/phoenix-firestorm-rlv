@@ -58,7 +58,7 @@ class LLImageDecodeThread;
 class LLTextureFetch;
 class LLWatchdogTimeout;
 class LLViewerJoystick;
-class LLViewerRegion; // <FS:Beq/>
+class LLViewerRegion;
 class FSPurgeDiskCacheThread; // <FS:Ansariel> Regular disk cache cleanup
 
 extern LLTrace::BlockTimerStatHandle FTM_FRAME;
@@ -111,7 +111,6 @@ public:
 
 	virtual bool restoreErrorTrap() = 0; // Require platform specific override to reset error handling mechanism.
 	                                     // return false if the error trap needed restoration.
-	virtual void initCrashReporting(bool reportFreeze = false) = 0; // What to do with crash report?
 	static void handleViewerCrash(); // Hey! The viewer crashed. Do this, soon.
     void checkForCrash();
     
@@ -151,6 +150,8 @@ public:
     virtual void forceErrorInfiniteLoop();
     virtual void forceErrorSoftwareException();
     virtual void forceErrorDriverCrash();
+    virtual void forceErrorCoroutineCrash();
+    virtual void forceErrorThreadCrash();
 
 	// The list is found in app_settings/settings_files.xml
 	// but since they are used explicitly in code,
@@ -225,10 +226,7 @@ public:
 	// llcorehttp init/shutdown/config information.
 	LLAppCoreHttp & getAppCoreHttp()			{ return mAppCoreHttp; }
 
-    // <FS:Beq> FIRE-30774 displayname capability is targetting previous region
-    // void updateNameLookupUrl();
-    void updateNameLookupUrl( const LLViewerRegion * region );
-	// </FS:Beq>
+    void updateNameLookupUrl(const LLViewerRegion* regionp);
 
 protected:
 	virtual bool initWindow(); // Initialize the viewer's window.

@@ -8,9 +8,7 @@ include(00-Common)
 include(Linking)
 
 include(Boost)
-if (BUGSPLAT_DB)
-  include(bugsplat)
-endif (BUGSPLAT_DB)
+include(bugsplat)
 include(BuildPackagesInfo)
 include(BuildVersion)
 include(CMakeCopyIfDifferent)
@@ -110,17 +108,17 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     )
 
-if (BUGSPLAT_DB)
-  include_directories(
-    ${BUGSPLAT_INCLUDE_DIR}
-    )
-endif (BUGSPLAT_DB)
-
 include_directories(SYSTEM
     ${LLCOMMON_SYSTEM_INCLUDE_DIRS}
     ${LLXML_SYSTEM_INCLUDE_DIRS}
     ${LLPHYSICSEXTENSIONS_INCLUDE_DIRS}
     )
+
+if (USE_BUGSPLAT)
+  include_directories(AFTER
+    ${BUGSPLAT_INCLUDE_DIR}
+    )
+endif (USE_BUGSPLAT)
 
 set(viewer_SOURCE_FILES
 # <Add FS includes below this line>
@@ -614,7 +612,7 @@ set(viewer_SOURCE_FILES
     llpanelteleporthistory.cpp
     llpaneltiptoast.cpp
     llpanelvoiceeffect.cpp
-    llpaneltopinfobar.cpp
+    #llpaneltopinfobar.cpp # <FS:Zi> unused
     llpanelpulldown.cpp
     llpanelvoicedevicesettings.cpp
     llpanelvolume.cpp
@@ -1380,7 +1378,7 @@ set(viewer_HEADER_FILES
     llpanelpulldown.h
     llpanelvoicedevicesettings.h
     llpanelvoiceeffect.h
-    llpaneltopinfobar.h
+    #llpaneltopinfobar.h # <FS:Zi> unused
     llpanelvolume.h
     llpanelvolumepulldown.h
     llpanelwearing.h
@@ -1744,11 +1742,11 @@ if (DARWIN)
     ${COREAUDIO_LIBRARY}
     )
 
-  if (BUGSPLAT_DB)
+  if (USE_BUGSPLAT)
     list(APPEND viewer_LIBRARIES
       ${BUGSPLAT_LIBRARIES}
       )
-  endif (BUGSPLAT_DB)
+  endif (USE_BUGSPLAT)
 
   # Add resource files to the project.
   set(viewer_RESOURCE_FILES
@@ -2196,10 +2194,10 @@ if (SDL_FOUND)
     )
 endif (SDL_FOUND)
 
-if (BUGSPLAT_DB)
+if (USE_BUGSPLAT)
   set_property(TARGET ${VIEWER_BINARY_NAME}
-    PROPERTY COMPILE_DEFINITIONS "LL_BUGSPLAT")
-endif (BUGSPLAT_DB)
+    PROPERTY COMPILE_DEFINITIONS "${BUGSPLAT_DEFINE}")
+endif (USE_BUGSPLAT)
 
 # add package files
 file(GLOB EVENT_HOST_SCRIPT_GLOB_LIST
@@ -2275,18 +2273,17 @@ if (WINDOWS)
       ${GOOGLE_PERF_TOOLS_SOURCE}
       ${CMAKE_CURRENT_SOURCE_DIR}/licenses-win32.txt
       ${CMAKE_CURRENT_SOURCE_DIR}/featuretable.txt
-      ${ARCH_PREBUILT_DIRS_RELEASE}/libeay32.dll
-      ${ARCH_PREBUILT_DIRS_RELEASE}/ssleay32.dll
-      ${ARCH_PREBUILT_DIRS_DEBUG}/libeay32.dll
-      ${ARCH_PREBUILT_DIRS_DEBUG}/ssleay32.dll
       ${viewer_APPSETTINGS_FILES}
       ${ARCH_PREBUILT_DIRS_RELEASE}/growl.dll
       SLPlugin
       media_plugin_cef
       media_plugin_libvlc
       #media_plugin_example # <FS:Ansariel> Don't package example plugin
-      windows-crash-logger
       )
+
+    if (NOT USE_BUGSPLAT)
+        LIST(APPEND COPY_INPUT_DEPENDENCIES windows-crash-logger)
+    endif (NOT USE_BUGSPLAT)
 
     # <FS:Ansariel> Only copy OpenJPEG dll if needed
     if (NOT USE_KDU)
@@ -2302,11 +2299,15 @@ if (WINDOWS)
         list(APPEND COPY_INPUT_DEPENDENCIES
             ${SHARED_LIB_STAGING_DIR}/${CMAKE_CFG_INTDIR}/vivoxsdk_x64.dll
             ${SHARED_LIB_STAGING_DIR}/${CMAKE_CFG_INTDIR}/ortp_x64.dll
+           ${ARCH_PREBUILT_DIRS_RELEASE}/libcrypto-1_1-x64.dll
+           ${ARCH_PREBUILT_DIRS_RELEASE}/libssl-1_1-x64.dll
             )
     else (ADDRESS_SIZE EQUAL 64)
         list(APPEND COPY_INPUT_DEPENDENCIES
             ${SHARED_LIB_STAGING_DIR}/${CMAKE_CFG_INTDIR}/vivoxsdk.dll
             ${SHARED_LIB_STAGING_DIR}/${CMAKE_CFG_INTDIR}/ortp.dll
+            ${ARCH_PREBUILT_DIRS_RELEASE}/libcrypto-1_1.dll
+            ${ARCH_PREBUILT_DIRS_RELEASE}/libssl-1_1.dll
             )
     endif (ADDRESS_SIZE EQUAL 64)
 
@@ -2360,10 +2361,9 @@ if (WINDOWS)
     if (EXISTS ${CMAKE_SOURCE_DIR}/copy_win_scripts)
       add_dependencies(${VIEWER_BINARY_NAME} copy_win_scripts)
     endif (EXISTS ${CMAKE_SOURCE_DIR}/copy_win_scripts)
-	
+
     add_dependencies(${VIEWER_BINARY_NAME}
       SLPlugin
-      windows-crash-logger
     )
 
     # sets the 'working directory' for debugging from visual studio.
@@ -2527,11 +2527,11 @@ target_link_libraries(${VIEWER_BINARY_NAME}
 
 target_link_libraries(${VIEWER_BINARY_NAME} ${DISCORD_LIBRARY} )
 
-if (BUGSPLAT_DB)
+if (USE_BUGSPLAT)
   target_link_libraries(${VIEWER_BINARY_NAME}
     ${BUGSPLAT_LIBRARIES}
     )
-endif (BUGSPLAT_DB)
+endif (USE_BUGSPLAT)
 	
 if (WINDOWS)
     target_link_libraries(${VIEWER_BINARY_NAME}
@@ -2553,7 +2553,6 @@ if (LINUX)
 if (NOT ENABLE_MEDIA_PLUGINS)
   set(COPY_INPUT_DEPENDENCIES
     ${VIEWER_BINARY_NAME}
-    linux-crash-logger
     SLPlugin
     media_plugin_cef
     #media_plugin_gstreamer010
@@ -2563,7 +2562,7 @@ if (NOT ENABLE_MEDIA_PLUGINS)
 else (NOT ENABLE_MEDIA_PLUGINS)
   set(COPY_INPUT_DEPENDENCIES
     ${VIEWER_BINARY_NAME}
-    linux-crash-logger
+    #linux-crash-logger
     SLPlugin
     media_plugin_cef
     #media_plugin_gstreamer010
@@ -2719,8 +2718,7 @@ if (DARWIN)
       ${CMAKE_CURRENT_SOURCE_DIR}/viewer_manifest.py
     )
 
-  add_dependencies(${VIEWER_BINARY_NAME} SLPlugin media_plugin_libvlc media_plugin_cef mac-crash-logger)
-  add_dependencies(${VIEWER_BINARY_NAME} mac-crash-logger)
+  add_dependencies(${VIEWER_BINARY_NAME} SLPlugin media_plugin_libvlc media_plugin_cef)
 
   if (ENABLE_SIGNING)
       set(SIGNING_SETTING "--signature=${SIGNING_IDENTITY}")
@@ -2764,63 +2762,7 @@ endif (INSTALL)
 
 # Note that the conventional VIEWER_SYMBOL_FILE is set by ../../build.sh
 if (PACKAGE AND (RELEASE_CRASH_REPORTING OR NON_RELEASE_CRASH_REPORTING) AND VIEWER_SYMBOL_FILE)
-  if (NOT BUGSPLAT_DB)
-    # Breakpad symbol-file generation
-    set(SYMBOL_SEARCH_DIRS "")
-    if (WINDOWS)
-      list(APPEND SYMBOL_SEARCH_DIRS "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
-      # slplugin.exe failing symbols dump - need to debug, might have to do with updated version of google breakpad
-      # set(VIEWER_EXE_GLOBS "${VIEWER_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX} slplugin.exe")
-      set(VIEWER_EXE_GLOBS "${VIEWER_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}")
-      set(VIEWER_LIB_GLOB "*${CMAKE_SHARED_MODULE_SUFFIX}")
-      set(VIEWER_COPY_MANIFEST copy_w_viewer_manifest)
-    endif (WINDOWS)
-    if (DARWIN)
-      list(APPEND SYMBOL_SEARCH_DIRS "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
-      # *TODO: Generate these search dirs in the cmake files related to each binary.
-      list(APPEND SYMBOL_SEARCH_DIRS "${CMAKE_BINARY_DIR}/llplugin/slplugin/${CMAKE_CFG_INTDIR}")
-      list(APPEND SYMBOL_SEARCH_DIRS "${CMAKE_BINARY_DIR}/mac_crash_logger/${CMAKE_CFG_INTDIR}")
-      list(APPEND SYMBOL_SEARCH_DIRS "${CMAKE_BINARY_DIR}/media_plugins/gstreamer010/${CMAKE_CFG_INTDIR}")
-##      set(VIEWER_EXE_GLOBS "'${product}' SLPlugin mac-crash-logger")
-      set(VIEWER_EXE_GLOBS "'${product}' mac-crash-logger")
-      set(VIEWER_LIB_GLOB "*.dylib")
-    endif (DARWIN)
-    if (LINUX)
-      list(APPEND SYMBOL_SEARCH_DIRS "${CMAKE_CURRENT_BINARY_DIR}/packaged")
-##      set(VIEWER_EXE_GLOBS "do-not-directly-run-secondlife-bin SLPlugin")
-      set(VIEWER_EXE_GLOBS "do-not-directly-run-firestorm-bin")
-      set(VIEWER_LIB_GLOB "*${CMAKE_SHARED_MODULE_SUFFIX}*")
-      set(VIEWER_COPY_MANIFEST copy_l_viewer_manifest)
-    endif (LINUX)
-
-    if(CMAKE_CFG_INTDIR STREQUAL ".")
-        set(LLBUILD_CONFIG ${CMAKE_BUILD_TYPE})
-    else(CMAKE_CFG_INTDIR STREQUAL ".")
-        # set LLBUILD_CONFIG to be a shell variable evaluated at build time
-        # reflecting the configuration we are currently building.
-        set(LLBUILD_CONFIG ${CMAKE_CFG_INTDIR})
-    endif(CMAKE_CFG_INTDIR STREQUAL ".")
-    add_custom_command(OUTPUT "${VIEWER_SYMBOL_FILE}"
-      COMMAND "${PYTHON_EXECUTABLE}"
-      ARGS
-        "${CMAKE_CURRENT_SOURCE_DIR}/generate_breakpad_symbols.py"
-        "${LLBUILD_CONFIG}"
-        "${SYMBOL_SEARCH_DIRS}"
-        "${VIEWER_EXE_GLOBS}"
-        "${VIEWER_LIB_GLOB}"
-        "${AUTOBUILD_INSTALL_DIR}/bin/dump_syms"
-        "${VIEWER_SYMBOL_FILE}"
-      DEPENDS generate_breakpad_symbols.py
-          VERBATIM)
-
-  add_custom_target(generate_breakpad_symbols DEPENDS "${VIEWER_SYMBOL_FILE}" "${VIEWER_BINARY_NAME}" "${VIEWER_COPY_MANIFEST}")
-    add_custom_target(generate_symbols DEPENDS "${VIEWER_SYMBOL_FILE}")
-    add_dependencies(generate_symbols ${VIEWER_BINARY_NAME})
-    if (WINDOWS OR LINUX)
-      add_dependencies(generate_symbols "${VIEWER_COPY_MANIFEST}")
-    endif (WINDOWS OR LINUX)
-
-  else (NOT BUGSPLAT_DB)
+  if (USE_BUGSPLAT)
     # BugSplat symbol-file generation
     if (WINDOWS)
       # Just pack up a tarball containing only the .pdb file for the
@@ -2904,9 +2846,9 @@ if (PACKAGE AND (RELEASE_CRASH_REPORTING OR NON_RELEASE_CRASH_REPORTING) AND VIE
     if (LINUX)
       # TBD
     endif (LINUX)
-  endif (NOT BUGSPLAT_DB)
+  endif (USE_BUGSPLAT)
 
-  # for both BUGSPLAT_DB and Breakpad
+  # for both Bugsplat and Breakpad
   add_dependencies(llpackage generate_symbols)
 endif ()
 
@@ -3048,6 +2990,10 @@ if (LL_TESTS)
     ${BOOST_CONTEXT_LIBRARY}
   )
 
+  LL_ADD_INTEGRATION_TEST(cppfeatures
+    ""
+    "${test_libs}"
+    )
   LL_ADD_INTEGRATION_TEST(llsechandler_basic
     llsechandler_basic.cpp
     "${test_libs}"

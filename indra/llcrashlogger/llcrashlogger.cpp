@@ -520,6 +520,7 @@ bool LLCrashLogger::runCrashLogPost(std::string host, LLSD data, std::string msg
     LLCore::HttpOptions::ptr_t httpOpts(new LLCore::HttpOptions);
 
     httpOpts->setTimeout(timeout);
+    httpOpts->setSSLVerifyPeer(false);
 
 	for(int i = 0; i < retries; ++i)
 	{
@@ -784,7 +785,7 @@ void LLCrashLogger::init_curl()
         }
 
         CRYPTO_set_locking_callback(ssl_locking_callback);
-        CRYPTO_THREADID_set_callback(ssl_thread_id_callback);
+        (void)CRYPTO_THREADID_set_callback(ssl_thread_id_callback);
     }
 }
 

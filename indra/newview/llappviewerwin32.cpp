@@ -233,7 +233,7 @@ static void exceptionTerminateHandler()
     long *null_ptr;
     null_ptr = 0;
     *null_ptr = 0xDEADBEEF; //Force an exception that will trigger breakpad.
-	//LLAppViewer::handleViewerCrash();
+
 	// we've probably been killed-off before now, but...
 	gOldTerminateHandler(); // call old terminate() handler
 }
@@ -493,10 +493,6 @@ int APIENTRY WINMAIN(HINSTANCE hInstance,
 	gOldTerminateHandler = std::set_terminate(exceptionTerminateHandler);
 
 	viewer_app_ptr->setErrorHandler(LLAppViewer::handleViewerCrash);
-
-#if LL_SEND_CRASH_REPORTS 
-	// ::SetUnhandledExceptionFilter(catchallCrashHandler); 
-#endif
 
 	// Set a debug info flag to indicate if multiple instances are running.
 	bool found_other_instance = !create_app_mutex();
@@ -778,12 +774,16 @@ bool LLAppViewerWin32::init()
 #if ! defined(LL_BUGSPLAT)
 #pragma message("Building without BugSplat")
 
-	LLAppViewer* pApp = LLAppViewer::instance();
-	pApp->initCrashReporting();
-
 #else // LL_BUGSPLAT
 #pragma message("Building with BugSplat")
 	// <FS:ND> Pre BugSplat dance, make sure settings are valid, query crash behavior and then set up Bugsplat accordingly"
+    //if (!isSecondInstance())
+    //{
+    //    // Cleanup previous session
+    //    std::string log_file = gDirUtilp->getExpandedFilename(LL_PATH_LOGS, "bugsplat.log");
+    //    LLFile::remove(log_file, ENOENT);
+    //}
+
 	success = LLAppViewer::init();
 	if (!success)
 		return false;
@@ -812,7 +812,7 @@ bool LLAppViewerWin32::init()
 	llifstream inf(build_data_fname.c_str());
 	if (! inf.is_open())
 	{
-		LL_WARNS() << "Can't initialize BugSplat, can't read '" << build_data_fname
+		LL_WARNS("BUGSPLAT") << "Can't initialize BugSplat, can't read '" << build_data_fname
 				   << "'" << LL_ENDL;
 	}
 	else
@@ -822,7 +822,7 @@ bool LLAppViewerWin32::init()
 		if (! reader.parse(inf, build_data, false)) // don't collect comments
 		{
 			// gah, the typo is baked into Json::Reader API
-			LL_WARNS() << "Can't initialize BugSplat, can't parse '" << build_data_fname
+			LL_WARNS("BUGSPLAT") << "Can't initialize BugSplat, can't parse '" << build_data_fname
 					   << "': " << reader.getFormatedErrorMessages() << LL_ENDL;
 		}
 		else
@@ -830,7 +830,7 @@ bool LLAppViewerWin32::init()
 			Json::Value BugSplat_DB = build_data["BugSplat DB"];
 			if (! BugSplat_DB)
 			{
-				LL_WARNS() << "Can't initialize BugSplat, no 'BugSplat DB' entry in '"
+				LL_WARNS("BUGSPLAT") << "Can't initialize BugSplat, no 'BugSplat DB' entry in '"
 						   << build_data_fname << "'" << LL_ENDL;
 			}
 			else
@@ -841,31 +841,40 @@ bool LLAppViewerWin32::init()
 													   LL_VIEWER_VERSION_PATCH << '.' <<
 													   LL_VIEWER_VERSION_BUILD));
 
-				// have to convert normal wide strings to strings of __wchar_t
-
 				// <FS:ND> Set up Bugsplat to ask or always send
+                //DWORD dwFlags = MDSF_NONINTERACTIVE | // automatically submit report without prompting
+                //                MDSF_PREVENTHIJACKING; // disallow swiping Exception filter
+                DWORD dwFlags = dwAsk |
+                                MDSF_PREVENTHIJACKING; // disallow swiping Exception filter
+				// </FS:ND>
 
-				// sBugSplatSender = new MiniDmpSender(
-				// 	WCSTR(BugSplat_DB.asString()),
-				// 	WCSTR(LL_TO_WSTRING(LL_VIEWER_CHANNEL)),
-				// 	WCSTR(version_string),
-				// 	nullptr,              // szAppIdentifier -- set later
-				// 	MDSF_NONINTERACTIVE | // automatically submit report without prompting
-				// 	MDSF_PREVENTHIJACKING); // disallow swiping Exception filter
-				
+                //bool needs_log_file = !isSecondInstance() && debugLoggingEnabled("BUGSPLAT");
+                //if (needs_log_file)
+                //{
+                //    // Startup only!
+                //    LL_INFOS("BUGSPLAT") << "Engaged BugSplat logging to bugsplat.log" << LL_ENDL;
+                //    dwFlags |= MDSF_LOGFILE | MDSF_LOG_VERBOSE;
+                //}
+
+				// have to convert normal wide strings to strings of __wchar_t
 				sBugSplatSender = new MiniDmpSender(
 					WCSTR(BugSplat_DB.asString()),
 					WCSTR(LL_TO_WSTRING(LL_VIEWER_CHANNEL)),
 					WCSTR(version_string),
 					nullptr,              // szAppIdentifier -- set later
-					dwAsk | 
-					MDSF_PREVENTHIJACKING); // disallow swiping Exception filter
-				// </FS:ND>
+					dwFlags);
 
 				sBugSplatSender->setCallback(bugsplatSendLog);
 
+                //if (needs_log_file)
+                //{
+                //    // Log file will be created in %TEMP%, but it will be moved into logs folder in case of crash
+                //    std::string log_file = gDirUtilp->getExpandedFilename(LL_PATH_LOGS, "bugsplat.log");
+                //    sBugSplatSender->setLogFilePath(WCSTR(log_file));
+                //}
+
 				// engage stringize() overload that converts from wstring
-				LL_INFOS() << "Engaged BugSplat(" << LL_TO_STRING(LL_VIEWER_CHANNEL)
+				LL_INFOS("BUGSPLAT") << "Engaged BugSplat(" << LL_TO_STRING(LL_VIEWER_CHANNEL)
 						   << ' ' << stringize(version_string) << ')' << LL_ENDL;
 			} // got BugSplat_DB
 		} // parsed build_data.json
@@ -897,6 +906,16 @@ bool LLAppViewerWin32::cleanup()
 	}
 
 	return result;
+}
+
+void LLAppViewerWin32::reportCrashToBugsplat(void* pExcepInfo)
+{
+#if defined(LL_BUGSPLAT)
+    if (sBugSplatSender)
+    {
+        sBugSplatSender->createReport((EXCEPTION_POINTERS*)pExcepInfo);
+    }
+#endif // LL_BUGSPLAT
 }
 
 void LLAppViewerWin32::initLoggingAndGetLastDuration()
@@ -1040,59 +1059,7 @@ bool LLAppViewerWin32::beingDebugged()
 
 bool LLAppViewerWin32::restoreErrorTrap()
 {	
-	return true;
-	//return LLWinDebug::checkExceptionHandler();
-}
-
-void LLAppViewerWin32::initCrashReporting(bool reportFreeze)
-{
-	if (isSecondInstance()) return; //BUG-5707 do not start another crash reporter for second instance.
-
-	const char* logger_name = "win_crash_logger.exe";
-	std::string exe_path = gDirUtilp->getExecutableDir();
-	exe_path += gDirUtilp->getDirDelimiter();
-	exe_path += logger_name;
-
-    std::string logdir = gDirUtilp->getExpandedFilename(LL_PATH_DUMP, "");
-    std::string appname = gDirUtilp->getExecutableFilename();
-
-	S32 slen = logdir.length() -1;
-	S32 end = slen;
-	while (logdir.at(end) == '/' || logdir.at(end) == '\\') end--;
-	
-	if (slen !=end)
-	{
-		logdir = logdir.substr(0,end+1);
-	}
-	//std::string arg_str = "\"" + exe_path + "\" -dumpdir \"" + logdir + "\" -procname \"" + appname + "\" -pid " + stringize(LLApp::getPid());
-	//_spawnl(_P_NOWAIT, exe_path.c_str(), arg_str.c_str(), NULL);
-	std::string arg_str =  "\"" + exe_path + "\" -dumpdir \"" + logdir + "\" -procname \"" + appname + "\" -pid " + stringize(LLApp::getPid()); 
-
-	STARTUPINFO startInfo={sizeof(startInfo)};
-	PROCESS_INFORMATION processInfo;
-
-	std::wstring exe_wstr;
-	exe_wstr = utf8str_to_utf16str(exe_path);
-
-	std::wstring arg_wstr;
-	arg_wstr = utf8str_to_utf16str(arg_str);
-
-	LL_INFOS("CrashReport") << "Creating crash reporter process " << exe_path << " with params: " << arg_str << LL_ENDL;
-    if(CreateProcess(exe_wstr.c_str(),     
-                     &arg_wstr[0],                 // Application arguments
-                     0,
-                     0,
-                     FALSE,
-                     CREATE_DEFAULT_ERROR_MODE,
-                     0,
-                     0,                              // Working directory
-                     &startInfo,
-                     &processInfo) == FALSE)
-      // Could not start application -> call 'GetLastError()'
-	{
-        LL_WARNS("CrashReport") << "CreateProcess failed " << GetLastError() << LL_ENDL;
-        return;
-    }
+	return true; // we don't check for handler collisions on windows, so just say they're ok
 }
 
 //virtual

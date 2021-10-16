@@ -1449,6 +1449,9 @@ http://secondlife.com/support pour vous aider à résoudre ce problème.
 	<string name="BodyPartsRightLeg">
 		Jambe droite
 	</string>
+	<string name="BodyPartsEnhancedSkeleton">
+		Squelette amélioré
+	</string>
 	<string name="GraphicsQualityLow">
 		Faible
 	</string>
@@ -1768,6 +1771,9 @@ Si vous continuez de recevoir ce message, contactez l’assistance Second Life �
 	</string>
 	<string name="InvFolder Merchant Outbox">
 		Boîte d&apos;envoi vendeur
+	</string>
+	<string name="InvFolder Settings">
+		Paramètres
 	</string>
 	<string name="InvFolder Friends">
 		Amis

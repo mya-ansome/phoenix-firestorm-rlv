@@ -142,7 +142,8 @@
 #include "llmoveview.h"
 #include "llnavigationbar.h"
 #include "llnotificationhandler.h"
-#include "llpaneltopinfobar.h"
+// <FS:Zi> We don't use the mini location panel in Firestorm
+// #include "llpaneltopinfobar.h"
 #include "llpopupview.h"
 #include "llpreviewtexture.h"
 #include "llprogressview.h"
@@ -2033,7 +2034,8 @@ LLViewerWindow::LLViewerWindow(const Params& p)
 	
 	if (!LLAppViewer::instance()->restoreErrorTrap())
 	{
-		LL_WARNS("Window") << " Someone took over my signal/exception handler (post createWindow)!" << LL_ENDL;
+        // this always happens, so downgrading it to INFO
+		LL_INFOS("Window") << " Someone took over my signal/exception handler (post createWindow; normal)" << LL_ENDL;
 	}
 
 	const bool do_not_enforce = false;
@@ -3010,7 +3012,7 @@ void LLViewerWindow::draw()
 	static LLCachedControl<bool> renderUIBuffer(gSavedSettings, "RenderUIBuffer");
 	if (!renderUIBuffer)
 	{
-		LLUI::getInstance()->mDirtyRect = getWindowRectScaled();
+		LLView::sDirtyRect = getWindowRectScaled();
 	}
 
 	// HACK for timecode debugging
@@ -7097,7 +7099,8 @@ void LLViewerWindow::setUIVisibility(bool visible)
 
 	// <FS:Zi> Is done inside XUI now, using visibility_control
 	//LLNavigationBar::getInstance()->setVisible(visible ? gSavedSettings.getBOOL("ShowNavbarNavigationPanel") : FALSE);
-	LLPanelTopInfoBar::getInstance()->setVisible(visible? gSavedSettings.getBOOL("ShowMiniLocationPanel") : FALSE);
+	// <FS:Zi> We don't use the mini location panel in Firestorm
+	// LLPanelTopInfoBar::getInstance()->setVisible(visible? gSavedSettings.getBOOL("ShowMiniLocationPanel") : FALSE);
 	mRootView->getChildView("status_bar_container")->setVisible(visible);
 
 	// <FS:Zi> hide utility bar if we are on a skin that uses it, e.g. Vintage

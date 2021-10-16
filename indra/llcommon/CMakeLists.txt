@@ -4,11 +4,11 @@ project(llcommon)
 
 include(00-Common)
 include(LLCommon)
+include(bugsplat)
 include(Linking)
 include(Boost)
 include(LLSharedLibs)
 include(JsonCpp)
-include(GoogleBreakpad)
 include(Copy3rdPartyLibs)
 include(ZLIB)
 include(URIPARSER)
@@ -18,7 +18,6 @@ include_directories(
     ${LLCOMMON_INCLUDE_DIRS}
     ${JSONCPP_INCLUDE_DIR}
     ${ZLIB_INCLUDE_DIRS}
-    ${BREAKPAD_INCLUDE_DIRECTORIES}
     ${URIPARSER_INCLUDE_DIRS}
     )
 
@@ -291,10 +290,10 @@ list(APPEND llcommon_HEADER_FILES "tea.h" )
 set_source_files_properties(${llcommon_HEADER_FILES}
                             PROPERTIES HEADER_FILE_ONLY TRUE)
 
-if (BUGSPLAT_DB)
-  set_source_files_properties(llapp.cpp
-    PROPERTIES COMPILE_DEFINITIONS "LL_BUGSPLAT")
-endif (BUGSPLAT_DB)
+if (USE_BUGSPLAT)
+  set_source_files_properties(${llcommon_SOURCE_FILES}
+    PROPERTIES COMPILE_DEFINITIONS "${BUGSPLAT_DEFINE}")
+endif (USE_BUGSPLAT)
 
 list(APPEND llcommon_SOURCE_FILES ${llcommon_HEADER_FILES})
 
@@ -328,7 +327,6 @@ endif(NOT WORD_SIZE EQUAL 32)
 
 target_link_libraries(
     llcommon
-    ${BREAKPAD_EXCEPTION_HANDLER_LIBRARIES}
     ${APRUTIL_LIBRARIES}
     ${APR_LIBRARIES}
     ${EXPAT_LIBRARIES}
