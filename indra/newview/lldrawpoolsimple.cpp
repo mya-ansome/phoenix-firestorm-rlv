@@ -40,6 +40,8 @@
 #include "rlvactions.h"
 #include "rlvhandler.h"
 // [/RLVa:KB]
+#include "fsperfstats.h"
+
 static LLGLSLShader* simple_shader = NULL;
 static LLGLSLShader* fullbright_shader = NULL;
 
@@ -241,7 +243,7 @@ void LLDrawPoolSimple::render(S32 pass)
 	LLGLDisable blend(GL_BLEND);
 	
 	{ //render simple
-		LL_RECORD_BLOCK_TIME(FTM_RENDER_SIMPLE);
+ 		LL_RECORD_BLOCK_TIME(FTM_RENDER_SIMPLE);
 		gPipeline.enableLightsDynamic();
 
 		if (mShaderLevel > 0)
