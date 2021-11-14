@@ -2339,7 +2339,7 @@ void LLDrawPoolAvatar::renderRigged(LLVOAvatar* avatar, U32 type, bool glow)
 		// <FS:Beq> Capture render times
 		if(vobj->isAttachment())
 		{
-			trackAttachments( vobj, true, &ratPtr);
+			// trackAttachments( vobj, true, &ratPtr);
 		}
 		// </FS:Beq>
 		
@@ -2664,7 +2664,7 @@ void LLDrawPoolAvatar::updateRiggedVertexBuffers(LLVOAvatar* avatar)
 			// <FS:Beq> Capture render times
 			if(vobj->isAttachment())
 			{
-				trackAttachments( vobj, true, &ratPtr );
+				// trackAttachments( vobj, true, &ratPtr );
 			}
 			// </FS:Beq>
 			LLVolume* volume = vobj->getVolume();
