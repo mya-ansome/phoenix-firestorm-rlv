@@ -112,3 +112,5 @@ compile_commands.json
 indra/tracy
 Release*
 firestorm.code-workspace
+
+.cache/clangd/index/
