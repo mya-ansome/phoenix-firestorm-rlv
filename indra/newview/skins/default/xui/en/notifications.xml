@@ -205,12 +205,25 @@ No tutorial is currently available.
    name="LoginFailedNoNetwork"
    type="alertmodal">
     <tag>fail</tag>
-    Could not connect to the [SECOND_LIFE_GRID].
+    Could not connect to the [CURRENT_GRID].
     &apos;[DIAGNOSTIC]&apos;
 Make sure your Internet connection is working properly.
 	<usetemplate
      name="okbutton"
      yestext="OK"/>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
+   name="LoginFailedToParse"
+   type="alertmodal">
+    <tag>fail</tag>
+Viewer received malformed response from server. Please, make sure your Internet connection is working properly and try again later.
+
+If you feel this is in error, please contact Support.
+    <usetemplate
+       name="okbutton"
+       yestext="OK"/>
   </notification>
 
   <notification
@@ -3080,6 +3093,14 @@ You have been logged out of [CURRENT_GRID].
 
   <notification
    icon="alertmodal.tga"
+   name="InventoryUnusable"
+   type="alertmodal">
+There was a problem loading your inventory. First, try logging out and logging in again. If you see this message again, contact Support to correct the problem.
+    <tag>fail</tag>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
    name="OnlyOfficerCanBuyLand"
    type="alertmodal">
 Unable to buy land for the group:
@@ -3775,12 +3796,12 @@ Forgetting the logged-in user requires you to log out.
    name="LoginPacketNeverReceived"
    type="alertmodal">
    <tag>fail</tag>
-We&apos;re having trouble connecting. There may be a problem with your Internet connection or the [SECOND_LIFE_GRID].
+We&apos;re having trouble connecting. There may be a problem with your Internet connection or the [CURRENT_GRID].
 
 You can either check your Internet connection and try again in a few minutes, click Help to view the [SUPPORT_SITE], or click Teleport to attempt to teleport home.
     <url option="1" name="url">
 
-			http://secondlife.com/support/
+			https://www.firestormviewer.org/support/
     </url>
     <form name="form">
       <button
@@ -3804,11 +3825,11 @@ You can either check your Internet connection and try again in a few minutes, cl
    name="LoginPacketNeverReceivedNoTP"
    type="alertmodal">
     <tag>fail</tag>
-We&apos;re having trouble connecting. There may be a problem with your Internet connection or the [SECOND_LIFE_GRID].
+We&apos;re having trouble connecting. There may be a problem with your Internet connection or the [CURRENT_GRID].
 
 You can either check your Internet connection and try again in a few minutes or click Help to view the [SUPPORT_SITE].
     <url option="1" name="url">
-			http://secondlife.com/support/
+			https://www.firestormviewer.org/support/
     </url>
     <form name="form">
       <button
@@ -13696,7 +13717,17 @@ Unable to load the track from [TRACK1] into [TRACK2].
   <tag>fail</tag>
   </notification>
 
-    <notification
+  <notification
+   icon="alertmodal.tga"
+   name="CompressionTestResults"
+   type="alertmodal">
+Test result for gzip level 6 file compression with [FILE] of size [SIZE] KB:
+Packing: [PACK_TIME]s [PSIZE]KB
+Unpacking: [UNPACK_TIME]s [USIZE]KB
+    <tag>fail</tag>
+  </notification>
+  
+  <notification
    icon="notify.tga"
    name="NoValidEnvSettingFound"
    persist="true"

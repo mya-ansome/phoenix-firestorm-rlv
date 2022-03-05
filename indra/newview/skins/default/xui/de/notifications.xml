@@ -86,7 +86,7 @@ Fehlerdetails: The notification called &apos;[_NAME]&apos; was not found in noti
 		<usetemplate name="okbutton" yestext="OK"/>
 	</notification>
 	<notification name="LoginFailedNoNetwork">
-		Verbindung nicht möglich zum [SECOND_LIFE_GRID].
+		Verbindung nicht möglich zum [CURRENT_GRID].
     &apos;[DIAGNOSTIC]&apos;
 Stellen Sie sicher, dass Ihre Internetverbindung funktioniert.
 		<usetemplate name="okbutton" yestext="OK"/>
@@ -710,7 +710,7 @@ Das Objekt ist möglicherweise außer Reichweite oder wurde gelöscht.
 		Dateidownload nicht möglich
 	</notification>
 	<notification name="MediaFileDownloadUnsupported">
-		Sie haben einen Datei-Download angefordert, der in [SECOND_LIFE] nicht unterstützt wird.
+		Sie haben einen Datei-Download angefordert, der in [APP_NAME] nicht unterstützt wird.
 		<usetemplate ignoretext="Warnung anzeigen, wenn ein Datei-Download nicht unterstützt wird" name="okignore" yestext="OK"/>
 	</notification>
 	<notification name="CannotWriteFile">
@@ -1230,6 +1230,9 @@ Dies ist ein temporärer Fehler. Bitte passen Sie das Kleidungsstück in einigen
 [MESSAGE]
 		<usetemplate name="okcancelbuttons" notext="Beenden" yestext="IM &amp; Chat anzeigen"/>
 	</notification>
+	<notification name="InventoryUnusable">
+		Es gab ein Problem mit Ihrem Inventar. Bitte versuchen Sie zunächst, sich erneut anzumelden. Falls Sie diese Nachricht erneut erhalten, kontaktieren Sie den Support, um die Ursache des Problems zu korrigieren.
+	</notification>
 	<notification name="OnlyOfficerCanBuyLand">
 		Landkauf für Gruppe nicht möglich:
 Sie sind nicht berechtigt, Land für die aktive Gruppe zu kaufen.
@@ -1510,11 +1513,11 @@ Falls Sie [CURRENT_GRID] zum ersten Mal verwenden, müssen Sie zuerst ein Konto 
 		<usetemplate name="okcancelbuttons" notext="Weiter" yestext="Konto erstellen..."/>
 	</notification>
 	<notification name="LoginPacketNeverReceived">
-		Es gibt Probleme mit der Verbindung. Möglicherweise besteht ein Problem mit Ihrer Internetverbindung oder dem [SECOND_LIFE_GRID].
+		Es gibt Probleme mit der Verbindung. Möglicherweise besteht ein Problem mit Ihrer Internetverbindung oder dem [CURRENT_GRID].
 
 Überprüfen Sie Ihre Internetverbindung und versuchen Sie es dann erneut, oder klicken Sie auf Hilfe, um zu [SUPPORT_SITE] zu gelangen, oder klicken Sie auf Teleportieren, um nach Hause zu teleportieren.
 		<url name="url">
-			http://de.secondlife.com/support/
+			https://www.firestormviewer.org/support/
 		</url>
 		<form name="form">
 			<button name="OK" text="OK"/>
@@ -1523,11 +1526,11 @@ Falls Sie [CURRENT_GRID] zum ersten Mal verwenden, müssen Sie zuerst ein Konto 
 		</form>
 	</notification>
 	<notification name="LoginPacketNeverReceivedNoTP">
-		Es gibt Probleme mit der Verbindung. Möglicherweise besteht ein Problem mit Ihrer Internetverbindung oder dem [SECOND_LIFE_GRID].
+		Es gibt Probleme mit der Verbindung. Möglicherweise besteht ein Problem mit Ihrer Internetverbindung oder dem [CURRENT_GRID].
 
 Überprüfen Sie Ihre Internetverbindung und versuchen Sie es dann erneut, oder klicken Sie auf Hilfe, um zu [SUPPORT_SITE] zu gelangen.
 		<url name="url">
-			http://de.secondlife.com/support/
+			https://www.firestormviewer.org/support/
 		</url>
 		<form name="form">
 			<button name="OK" text="OK"/>
@@ -4832,6 +4835,12 @@ Bitte kopieren Sie diese in Ihr Inventar und versuchen Sie es erneut.
 	<notification name="TrackLoadMismatch">
 		Der Pfad konnte nicht aus [TRACK1] in [TRACK2] geladen werden.
 	</notification>
+	<notification name="CompressionTestResults">
+		Test-Ergebnis für gip-Level 6 Datei-Komprimierung für [FILE] mit Größe [SIZE] KB:
+Packen: [PACK_TIME]s [PSIZE]KB
+Entpacken: [UNPACK_TIME]s [USIZE]KB
+    <tag>fail</tag>
+  </notification>
 	<notification name="NoValidEnvSettingFound">
 		Keine gültige Einstellung für die Umgebung ausgewählt.
 		
