@@ -569,6 +569,17 @@ void set_flags_and_update_appearance()
 	LLAppearanceMgr::instance().updateAppearanceFromCOF(true, true, no_op);
 }
 
+LLUUID id;
+void   remove_rlv(void *pParam)
+{
+    LLTimer *pTimer = (LLTimer *) pParam;
+    if (LLStartUp::getStartupState() >= STATE_STARTED && pTimer->getElapsedTimeF32() >= 10.0)
+    {
+        gRlvHandler.processCommand(id, "clear", true);
+        gIdleCallbacks.deleteFunction(remove_rlv, pParam);
+        delete pTimer;
+    }
+}
 // Returns false to skip other idle processing. Should only return
 // true when all initialization done.
 bool idle_startup()
@@ -2281,7 +2292,6 @@ bool idle_startup()
 	//---------------------------------------------------------------------
 	// World Wait
 	//---------------------------------------------------------------------
-	static LLUUID id;
 	if(STATE_WORLD_WAIT == LLStartUp::getStartupState())
 	{
 		// [RLVa]
@@ -3203,10 +3213,7 @@ bool idle_startup()
 		// </FS:PP>
 
 		// [RLVa]
-		new std::thread([]() {
-			std::this_thread::sleep_for(std::chrono::seconds(10));
-			gRlvHandler.processCommand(id, "clear", true);
-		});
+		gIdleCallbacks.addFunction(remove_rlv, new LLTimer());
 		// [/RLVa]
 
 		return TRUE;
