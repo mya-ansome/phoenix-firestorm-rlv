@@ -5964,7 +5964,7 @@ void LLVolumeGeometryManager::rebuildGeom(LLSpatialGroup* group)
 
 //MK
 						// Do not render surfaces with 0% alpha (unless we are in alpha debug mode)
-						if (1 ) // && !gAgent.mRRInterface.sRestrainedLoveRenderInvisibleSurfaces !LLDrawPoolAlpha::sShowDebugAlpha
+						if ( !LLDrawPoolAlpha::sShowDebugAlpha ) // && !gAgent.mRRInterface.sRestrainedLoveRenderInvisibleSurfaces !LLDrawPoolAlpha::sShowDebugAlpha
 						{
 							if (te->getColor().mV[3] < 0.0001f)
 							{
@@ -6145,8 +6145,9 @@ void LLVolumeGeometryManager::rebuildGeom(LLSpatialGroup* group)
 						emissive = true;
 					}
 //MK
-					// Do not render surfaces with 0% alpha (unless we are in alpha debug mode or they glow)
-					if (!emissive ) // && !gAgent.mRRInterface.sRestrainedLoveRenderInvisibleSurfaces && !LLDrawPoolAlpha::sShowDebugAlpha
+					// Do not render surfaces with 0% alpha (unless we are in alpha debug mode or they glow) !emissive
+                    if ( !LLDrawPoolAlpha::sShowDebugAlpha )  // && !gAgent.mRRInterface.sRestrainedLoveRenderInvisibleSurfaces &&
+                                                              // !LLDrawPoolAlpha::sShowDebugAlpha
 					{
 						if (te->getColor().mV[3] < 0.0001f)
 						{
