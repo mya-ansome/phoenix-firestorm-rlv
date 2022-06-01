@@ -428,7 +428,7 @@ const char* RlvStrings::getStringFromReturnCode(ERlvCmdRet eRet)
 std::string RlvStrings::getVersion(const LLUUID& idRlvObject, bool fLegacy)
 {
 	bool fCompatMode = RlvSettings::isCompatibilityModeObject(idRlvObject);
-	return llformat("%s viewer v%d.%d.%d (RLVa %d.%d.%d)",
+	return llformat("%s viewer v2.09.30.01 (%d.%d.%d)",
 		( (!fLegacy) ? "RestrainedLove" : "RestrainedLife" ),
 		(!fCompatMode) ? RLV_VERSION_MAJOR : RLV_VERSION_MAJOR_COMPAT, (!fCompatMode) ? RLV_VERSION_MINOR : RLV_VERSION_MINOR_COMPAT, (!fCompatMode) ? RLV_VERSION_PATCH : RLV_VERSION_PATCH_COMPAT,
 		RLVa_VERSION_MAJOR, RLVa_VERSION_MINOR, RLVa_VERSION_PATCH);
