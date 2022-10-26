@@ -4804,7 +4804,7 @@ Just like in real life, it takes a while for everyone to learn about a new name.
  icon="alertmodal.tga"
  name="SetDisplayNameBlocked"
  type="alert">
-Sorry, you cannot change your display name. If you feel this is in error, please contact Linden Lab support.
+Sorry, you cannot change your display name. If you feel this is in error, please contact the grid support.
   <tag>fail</tag>
   </notification>
 
@@ -9726,6 +9726,29 @@ We cannot display a preview of this texture because it is no-copy and/or no-tran
 
   <notification
    icon="alertmodal.tga"
+   name="FacePasteFailed"
+   type="alertmodal">
+Paste failed. [REASON]
+   <usetemplate
+    name="okbutton"
+    yestext="OK"/>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
+   name="FacePasteTexturePermissions"
+   type="alertmodal">
+    You applied a texture with limited permissions, object will inherit permissions from texture.
+    <usetemplate
+     ignoretext="Paste: You applied a texture with limited permissions"
+     name="notifyignore"/>
+    <usetemplate
+     name="okbutton"
+     yestext="OK"/>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
    name="ConfirmLeaveCall"
    type="alertmodal">
 Are you sure you want to leave this call?
@@ -10335,18 +10358,6 @@ Do you wish to continue?
      notext="Cancel"
      yestext="OK"/>
   </notification>
-
-  <global name="UnsupportedShaderRequirements">
-You do not appear to meet the hardware requirements for [APP_NAME]. [APP_NAME] requires OpenGL 2.0 or later shader support. If this is the case, you may want to make sure that you have the latest drivers for your graphics card, and service packs and patches for your operating system.
-
-If you continue to have problems, please visit the [SUPPORT_SITE].
-  </global>
-
-  <global name="UnsupportedGLRequirements">
-You do not appear to have the proper hardware requirements for [APP_NAME]. [APP_NAME] requires an OpenGL graphics card that has multitexture support. If this is the case, you may want to make sure that you have the latest drivers for your graphics card, and service packs and patches for your operating system.
-
-If you continue to have problems, please visit the [SUPPORT_SITE].
-  </global>
 
   <global name="UnsupportedIntelDriver">
 The installed Intel graphics driver for [GPUNAME], version [VERSION], is significantly out of date and is known to cause excessive rates of program crashes. You are strongly advised to update to a current Intel driver.
@@ -12423,7 +12434,7 @@ Try selecting a smaller piece of land.
    <tag>fail</tag>
 Can't divide land.
 Can't find the parcel.
-Please report with Help -> Report Bug...
+Please report with Help -> Report Problem...
   </notification>
 
   <notification
@@ -13747,7 +13758,8 @@ Unpacking: [UNPACK_TIME]s [USIZE]KB
     <tag>fail</tag>
   </notification>
   
-  <notification
+
+    <notification
    icon="alertmodal.tga"
    label="Prompt for MFA Token"
    name="PromptMFAToken"
@@ -13766,6 +13778,40 @@ Unpacking: [UNPACK_TIME]s [USIZE]KB
        name="cancel"
        text="Cancel"/>
     </form>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
+   label="Create subfolder"
+   name="CreateSubfolder"
+   type="alertmodal">
+    <unique/>
+    Name the new folder:
+    <tag>confirm</tag>
+    <form name="form">
+      <input name="message" type="text">
+        [DESC]
+      </input>
+      <button
+       default="true"
+       index="0"
+       name="OK"
+       text="OK"/>
+      <button
+       index="1"
+       name="Cancel"
+       text="Cancel"/>
+    </form>
+  </notification>
+  <notification
+   icon="alertmodal.tga"
+   name="SameFolderRequired"
+   type="alert">
+    Selected items must be in the same folder.
+    <tag>fail</tag>
+    <usetemplate
+      name="okbutton"
+      yestext="OK"/>
   </notification>
 
   <notification
@@ -13812,7 +13858,7 @@ Firestorm Animation Overrider: [AO_MESSAGE]
    icon="alertmodal.tga"
    name="AttachedRiggedObjectToHUD"
    type="alertmodal">
-An attachment named "[NAME]" contains rigged mesh but is attached to the HUD point "[HUD_POINT]". This means you will see it rendered correctly, but everyone else is not going to be able see it at all. You might want to consider taking it off and re-attaching it to a regular body attachment point.
+An attachment named "[NAME]" contains rigged mesh but is attached to the HUD point "[HUD_POINT]". Rigged meshes attached to HUD points won't be visible at all - neither for you nor for anybody else. You might want to consider taking it off and re-attaching it to a regular body attachment point.
    <usetemplate
     ignoretext="Warn me when a rigged attachment is worn on a HUD attachment point"
     name="notifyignore"/>

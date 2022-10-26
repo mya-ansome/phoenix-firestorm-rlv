@@ -4145,9 +4145,9 @@ void RlvHandler::drawRenderLimit (BOOL force_opaque /*= FALSE*/)
 	int mCamDistNbGradients = 40;
 
 	gGL.setColorMask(true, false);
-	if (LLGLSLShader::sNoFixedFunction) {
+	//if (LLGLSLShader::sNoFixedFunction) {
 		gUIProgram.bind();
-	}
+	//}
 
 	gGL.getTexUnit(0)->unbind(LLTexUnit::TT_TEXTURE);
 	gGL.matrixMode(LLRender::MM_MODELVIEW);
@@ -4201,9 +4201,9 @@ void RlvHandler::drawRenderLimit (BOOL force_opaque /*= FALSE*/)
 	gGL.flush();
 	gGL.setColorMask(true, false);
 
-	if (LLGLSLShader::sNoFixedFunction) {
+	//if (LLGLSLShader::sNoFixedFunction) {
 		gUIProgram.unbind();
-	}
+	//}
 
 	RlvHandler::sRenderLimitRenderedThisFrame = TRUE;
 }

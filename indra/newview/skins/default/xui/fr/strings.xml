@@ -202,7 +202,7 @@ Version serveur vocal : [VOICE_VERSION]
 	<string name="LoginFailedNoNetwork">
 		Erreur réseau : impossible d&apos;établir la connexion. Veuillez vérifier votre connexion réseau.
 	</string>
-	<string name="LoginFailed">
+	<string name="LoginFailedHeader">
 		Échec de la connexion.
 	</string>
 	<string name="Quit">
@@ -223,6 +223,10 @@ http://secondlife.com/download
 
 Pour plus d&apos;informations, consultez la page FAQ ci-dessous :
 http://secondlife.com/viewer-access-faq
+	</string>
+	<string name="LoginFailed">
+		Échec de la connexion d'urgence de la grille.
+Si vous pensez qu'il s'agit d'une erreur, veuillez contacter le support du réseau.
 	</string>
 	<string name="LoginIntermediateOptionalUpdateAvailable">
 		Mise à jour facultative du client disponible : [VERSION]
@@ -5342,10 +5346,10 @@ Si le problème persiste, vérifiez la configuration de votre réseau et de votr
 		Mon abonnement Premium
 	</string>
 	<string name="DeleteItems">
-		Supprimer les articles sélectionnés ?
+		Supprimer les [COUNT_SELECTION] articles sélectionnés ([COUNT_TOTAL]] total) ?
 	</string>
 	<string name="DeleteItem">
-		Supprimer l&apos;article sélectionné ?
+		Supprimer l&apos;article sélectionné ([COUNT_TOTAL]] total) ?
 	</string>
 	<string name="EmptyOutfitText">
 		Cette tenue ne contient aucun article.
@@ -6634,6 +6638,7 @@ Propriétaire précédent : [OBJECT_LAST_OWNER_ID]
 Posé par : [OBJECT_REZZER_KEY]
 Groupe : [OBJECT_GROUP]
 Date de création : [OBJECT_CREATION_TIME]
+Temps pour apparaitre : [OBJECT_REZ_TIME]
 Type de cheminement : [OBJECT_PATHFINDING_TYPE]
 Point d'attache : [OBJECT_ATTACHED_POINT]
 Attaché temporairement : [OBJECT_TEMP_ATTACHED]
