@@ -53,6 +53,7 @@
 #include "llviewerobjectlist.h"
 #include "llvoavatar.h"
 #include "llavataractions.h"
+#include "lluiusage.h"
 
 // Firestorm includes
 #include "fscommon.h"
@@ -302,6 +303,8 @@ void LLAvatarTracker::copyBuddyList(buddy_map_t& buddies) const
 void LLAvatarTracker::terminateBuddy(const LLUUID& id)
 {
 	LL_DEBUGS() << "LLAvatarTracker::terminateBuddy()" << LL_ENDL;
+	LLUIUsage::instance().logCommand("Agent.TerminateFriendship");
+
 	LLRelationship* buddy = get_ptr_in_map(mBuddyInfo, id);
 	if(!buddy) return;
 	mBuddyInfo.erase(id);
@@ -713,10 +716,6 @@ void LLAvatarTracker::processChange(LLMessageSystem* msg)
 			if(mBuddyInfo.find(agent_related) != mBuddyInfo.end())
 			{
 				(mBuddyInfo[agent_related])->setRightsTo(new_rights);
-
-				// I'm not totally sure why it adds the agents id to the changed list
-				// nor why it doesn't add the friends's ID.
-				// Add the friend's id to the changed list for contacts list -KC
 				mChangedBuddyIDs.insert(agent_related);
 			}
 		}
@@ -804,7 +803,7 @@ void LLAvatarTracker::processNotify(LLMessageSystem* msg, bool online)
 				// we were tracking someone who went offline
 				deleteTrackingData();
 			}
-		}
+		// } <FS:Beq/> [FIRE-32324] least invasive change move this brace after the if. LL fix should follow sometime soon
 		//[FIX FIRE-3522 : SJ] Notify Online/Offline to Nearby Chat even if chat_notify isnt true
 		
 		// <FS:PP> Attempt to speed up things a little
@@ -816,6 +815,7 @@ void LLAvatarTracker::processNotify(LLMessageSystem* msg, bool online)
 			// Look up the name of this agent for the notification
 			LLAvatarNameCache::get(agent_id,boost::bind(&on_avatar_name_cache_notify,_1, _2, online, payload));
 		}
+		} // <FS:Beq/> [FIRE-32324] least invasive change move this brace after the if 
 
 		mModifyMask |= LLFriendObserver::ONLINE;
 		instance().notifyObservers();

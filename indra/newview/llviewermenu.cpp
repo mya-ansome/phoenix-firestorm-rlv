@@ -34,10 +34,11 @@
 #include "llviewermenu.h" 
 
 // linden library includes
-#include "llavatarnamecache.h"	// IDEVO
+#include "llavatarnamecache.h"  // IDEVO (I Are Not Men!)
+#include "llcombobox.h"
+#include "llcoros.h"
 #include "llfloaterreg.h"
 #include "llfloatersidepanelcontainer.h"
-#include "llcombobox.h"
 #include "llinventorypanel.h"
 #include "llnotifications.h"
 #include "llnotificationsutil.h"
@@ -57,6 +58,7 @@
 #include "llcompilequeue.h"
 #include "llconsole.h"
 #include "lldebugview.h"
+#include "lldiskcache.h"
 #include "llenvironment.h"
 #include "llfilepicker.h"
 #include "llfirstuse.h"
@@ -97,6 +99,7 @@
 #include "llmarketplacefunctions.h"
 #include "llmenuoptionpathfindingrebakenavmesh.h"
 #include "llmoveview.h"
+#include "llnavigationbar.h"
 #include "llparcel.h"
 #include "llrootview.h"
 #include "llsceneview.h"
@@ -2412,6 +2415,32 @@ class LLAdvancedDropPacket : public view_listener_t
 	}
 };
 
+//////////////////////
+// PURGE DISK CACHE //
+//////////////////////
+
+
+class LLAdvancedPurgeDiskCache : public view_listener_t
+{
+	bool handleEvent(const LLSD& userdata)
+	{
+        LL::WorkQueue::ptr_t main_queue = LL::WorkQueue::getInstance("mainloop");
+        LL::WorkQueue::ptr_t general_queue = LL::WorkQueue::getInstance("General");
+        llassert_always(main_queue);
+        llassert_always(general_queue);
+        main_queue->postTo(
+            general_queue,
+            []() // Work done on general queue
+            {
+                LLDiskCache::getInstance()->purge();
+                // Nothing needed to return
+            },
+            [](){}); // Callback to main thread is empty as there is nothing left to do
+
+		return true;
+	}
+};
+
 
 ////////////////////
 // EVENT Recorder //
@@ -2636,25 +2665,13 @@ class LLAdvancedEnableObjectObjectOcclusion: public view_listener_t
 };
 
 /////////////////////////////////////
-// Enable Framebuffer Objects	  ///
-/////////////////////////////////////
-class LLAdvancedEnableRenderFBO: public view_listener_t
-{
-	bool handleEvent(const LLSD& userdata)
-	{
-		bool new_value = gGLManager.mHasFramebufferObject;
-		return new_value;
-	}
-};
-
-/////////////////////////////////////
 // Enable Advanced Lighting Model ///
 /////////////////////////////////////
 class LLAdvancedEnableRenderDeferred: public view_listener_t
 {
 	bool handleEvent(const LLSD& userdata)
 	{
-		bool new_value = gGLManager.mHasFramebufferObject && LLViewerShaderMgr::instance()->getShaderLevel(LLViewerShaderMgr::SHADER_WINDLIGHT) > 1 &&
+		bool new_value = LLViewerShaderMgr::instance()->getShaderLevel(LLViewerShaderMgr::SHADER_WINDLIGHT) > 1 &&
 			LLViewerShaderMgr::instance()->getShaderLevel(LLViewerShaderMgr::SHADER_AVATAR) > 0;
 		return new_value;
 	}
@@ -2667,7 +2684,7 @@ class LLAdvancedEnableRenderDeferredOptions: public view_listener_t
 {
 	bool handleEvent(const LLSD& userdata)
 	{
-		bool new_value = gGLManager.mHasFramebufferObject && LLViewerShaderMgr::instance()->getShaderLevel(LLViewerShaderMgr::SHADER_WINDLIGHT) > 1 &&
+		bool new_value = LLViewerShaderMgr::instance()->getShaderLevel(LLViewerShaderMgr::SHADER_WINDLIGHT) > 1 &&
 			LLViewerShaderMgr::instance()->getShaderLevel(LLViewerShaderMgr::SHADER_AVATAR) > 0 && gSavedSettings.getBOOL("RenderDeferred");
 		return new_value;
 	}
@@ -2719,6 +2736,7 @@ class LLAdvancedForceErrorLlerror : public view_listener_t
 		return true;
 	}
 };
+
 class LLAdvancedForceErrorBadMemoryAccess : public view_listener_t
 {
 	bool handleEvent(const LLSD& userdata)
@@ -2726,6 +2744,22 @@ class LLAdvancedForceErrorBadMemoryAccess : public view_listener_t
 		force_error_bad_memory_access(NULL);
 		return true;
 	}
+};
+
+class LLAdvancedForceErrorBadMemoryAccessCoro : public view_listener_t
+{
+    bool handleEvent(const LLSD& userdata)
+    {
+        LLCoros::instance().launch(
+            "AdvancedForceErrorBadMemoryAccessCoro",
+            [](){
+                // Wait for one mainloop() iteration, letting the enclosing
+                // handleEvent() method return.
+                llcoro::suspend();
+                force_error_bad_memory_access(NULL);
+            });
+        return true;
+    }
 };
 
 class LLAdvancedForceErrorInfiniteLoop : public view_listener_t
@@ -2746,6 +2780,22 @@ class LLAdvancedForceErrorSoftwareException : public view_listener_t
 	}
 };
 
+class LLAdvancedForceErrorSoftwareExceptionCoro : public view_listener_t
+{
+    bool handleEvent(const LLSD& userdata)
+    {
+        LLCoros::instance().launch(
+            "AdvancedForceErrorSoftwareExceptionCoro",
+            [](){
+                // Wait for one mainloop() iteration, letting the enclosing
+                // handleEvent() method return.
+                llcoro::suspend();
+                force_error_software_exception(NULL);
+            });
+        return true;
+    }
+};
+
 class LLAdvancedForceErrorDriverCrash : public view_listener_t
 {
 	bool handleEvent(const LLSD& userdata)
@@ -2755,14 +2805,16 @@ class LLAdvancedForceErrorDriverCrash : public view_listener_t
 	}
 };
 
-class LLAdvancedForceErrorCoroutineCrash : public view_listener_t
-{
-    bool handleEvent(const LLSD& userdata)
-    {
-        force_error_coroutine_crash(NULL);
-        return true;
-    }
-};
+// <FS:Ansariel> Wrongly merged back in by LL
+//class LLAdvancedForceErrorCoroutineCrash : public view_listener_t
+//{
+//    bool handleEvent(const LLSD& userdata)
+//    {
+//        force_error_coroutine_crash(NULL);
+//        return true;
+//    }
+//};
+// </FS:Ansariel>
 
 class LLAdvancedForceErrorThreadCrash : public view_listener_t
 {
@@ -4433,6 +4485,11 @@ bool my_profile_visible()
 {
 	LLFloater* floaterp = LLAvatarActions::getProfileFloater(gAgentID);
 	return floaterp && floaterp->isInVisibleChain();
+}
+
+bool picks_tab_visible()
+{
+    return my_profile_visible() && LLAvatarActions::isPickTabSelected(gAgentID);
 }
 
 bool enable_freeze_eject(const LLSD& avatar_id)
@@ -6607,12 +6664,10 @@ class LLToolsEnablePathfindingRebakeRegion : public view_listener_t
 	{
 		bool returnValue = false;
 
-		if (LLPathfindingManager::getInstance() != NULL)
-		{
-			LLMenuOptionPathfindingRebakeNavmesh *rebakeInstance = LLMenuOptionPathfindingRebakeNavmesh::getInstance();
-			returnValue = (rebakeInstance->canRebakeRegion() &&
-				(rebakeInstance->getMode() == LLMenuOptionPathfindingRebakeNavmesh::kRebakeNavMesh_Available));
-		}
+        if (LLNavigationBar::instanceExists())
+        {
+            returnValue = LLNavigationBar::getInstance()->isRebakeNavMeshAvailable();
+        }
 		return returnValue;
 	}
 };
@@ -6697,6 +6752,16 @@ class LLToolsSelectNextPartFace : public view_listener_t
         bool ifwd = (userdata.asString() == "includenext");
         bool iprev = (userdata.asString() == "includeprevious");
 
+		// <FS:Zi> Make shift+click on forward/back buttons work like includenext/previous
+		if (gKeyboard->currentMask(false) & MASK_SHIFT)
+		{
+			ifwd = fwd;
+			iprev = prev;
+			fwd = false;
+			prev = false;
+		}
+		// </FS:Zi>
+
         LLViewerObject* to_select = NULL;
         bool restart_face_on_part = !cycle_faces;
         S32 new_te = 0;
@@ -6714,6 +6779,30 @@ class LLToolsSelectNextPartFace : public view_listener_t
 
             if (fwd || ifwd)
             {
+                // <FS:Zi> FIRE-32282: fix face selection cycle starting at face 1 instead of face 0
+                // is more than one face selected in the whole set?
+                if (LLSelectMgr::getInstance()->getSelection()->getTECount() > 1)
+                {
+                    // count the number of selected faces on the current link
+                    S32 count = 0;
+                    S32 num_tes = to_select->getNumTEs();
+                    for (S32 te = 0; te < num_tes; te++)
+                    {
+                        if (nodep->isTESelected(te))
+                        {
+                            ++count;
+                        }
+                    }
+
+                    // if all faces of the current link are selected, set a flag to make sure the
+                    // next selected face will be face 0
+                    if (count == num_tes)
+                    {
+                        selected_te = -1;
+                    }
+                }
+                // </FS:Zi>
+
                 if (selected_te < 0)
                 {
                     new_te = 0;
@@ -6822,6 +6911,10 @@ class LLToolsSelectNextPartFace : public view_listener_t
                     }
                 }
                 LLSelectMgr::getInstance()->selectObjectOnly(to_select, new_te);
+
+                // <FS:Zi> Add this back in additionally to selectObjectOnly() to get the lastOperadedTE()
+                // function back working to properly shift+cycle through faces
+                LLSelectMgr::getInstance()->addAsIndividual(to_select, new_te, false);
             }
             else
             {
@@ -7833,6 +7926,29 @@ class LLAvatarToggleMyProfile : public view_listener_t
 	}
 };
 
+class LLAvatarTogglePicks : public view_listener_t
+{
+    bool handleEvent(const LLSD& userdata)
+    {
+        LLFloater * instance = LLAvatarActions::getProfileFloater(gAgent.getID());
+        if (LLFloater::isMinimized(instance) || (instance && !instance->hasFocus() && !instance->getIsChrome()))
+        {
+            instance->setMinimized(FALSE);
+            instance->setFocus(TRUE);
+            LLAvatarActions::showPicks(gAgent.getID());
+        }
+        else if (picks_tab_visible())
+        {
+            instance->closeFloater();
+        }
+        else
+        {
+            LLAvatarActions::showPicks(gAgent.getID());
+        }
+        return true;
+    }
+};
+
 class LLAvatarToggleSearch : public view_listener_t
 {
 	bool handleEvent(const LLSD& userdata)
@@ -8418,6 +8534,15 @@ class LLShowAgentProfile : public view_listener_t
 		}
 		return true;
 	}
+};
+
+class LLShowAgentProfilePicks : public view_listener_t
+{
+    bool handleEvent(const LLSD& userdata)
+    {
+        LLAvatarActions::showPicks(gAgent.getID());
+        return true;
+    }
 };
 
 class LLToggleAgentProfile : public view_listener_t
@@ -10576,10 +10701,12 @@ void force_error_driver_crash(void *)
     LLAppViewer::instance()->forceErrorDriverCrash();
 }
 
-void force_error_coroutine_crash(void *)
-{
-    LLAppViewer::instance()->forceErrorCoroutineCrash();
-}
+// <FS:Ansariel> Wrongly merged back in by LL
+//void force_error_coroutine_crash(void *)
+//{
+//    LLAppViewer::instance()->forceErrorCoroutineCrash();
+//}
+// </FS:Ansariel>
 
 void force_error_thread_crash(void *)
 {
@@ -10873,6 +11000,26 @@ class LLViewCheckHighlightTransparent : public view_listener_t
 		return new_value;
 	}
 };
+// <FS:Beq> FIRE-32132 et al. Allow rigged mesh transparency highlights to be toggled
+class LLViewHighlightTransparentRigged : public view_listener_t
+{
+	bool handleEvent(const LLSD& userdata)
+	{
+		LLDrawPoolAlpha::sShowDebugAlphaRigged = !LLDrawPoolAlpha::sShowDebugAlphaRigged;
+        gPipeline.resetVertexBuffers();
+		return true;
+	}
+};
+
+class LLViewCheckHighlightTransparentRigged : public view_listener_t
+{
+	bool handleEvent(const LLSD& userdata)
+	{
+		bool new_value = LLDrawPoolAlpha::sShowDebugAlphaRigged;
+		return new_value;
+	}
+};
+// </FS:Beq>
 
 class LLViewBeaconWidth : public view_listener_t
 {
@@ -11895,6 +12042,7 @@ void initialize_menus()
 	view_listener_t::addMenu(new LLViewLookAtLastChatter(), "View.LookAtLastChatter");
 	view_listener_t::addMenu(new LLViewShowHoverTips(), "View.ShowHoverTips");
 	view_listener_t::addMenu(new LLViewHighlightTransparent(), "View.HighlightTransparent");
+	view_listener_t::addMenu(new LLViewHighlightTransparentRigged(), "View.HighlightTransparentRigged"); // <FS:Beq/> FIRE-32132 et al. Allow rigged mesh transparency highlights to be toggled
 	view_listener_t::addMenu(new LLViewToggleRenderType(), "View.ToggleRenderType");
 	view_listener_t::addMenu(new LLViewShowHUDAttachments(), "View.ShowHUDAttachments");
 	view_listener_t::addMenu(new LLZoomer(1.2f), "View.ZoomOut");
@@ -11911,6 +12059,7 @@ void initialize_menus()
 	view_listener_t::addMenu(new LLViewCheckJoystickFlycam(), "View.CheckJoystickFlycam");
 	view_listener_t::addMenu(new LLViewCheckShowHoverTips(), "View.CheckShowHoverTips");
 	view_listener_t::addMenu(new LLViewCheckHighlightTransparent(), "View.CheckHighlightTransparent");
+	view_listener_t::addMenu(new LLViewCheckHighlightTransparentRigged(), "View.CheckHighlightTransparentRigged");// <FS:Beq/> FIRE-32132 et al. Allow rigged mesh transparency highlights to be toggled
 	view_listener_t::addMenu(new LLViewCheckRenderType(), "View.CheckRenderType");
 	view_listener_t::addMenu(new LLViewStatusAway(), "View.Status.CheckAway");
 	view_listener_t::addMenu(new LLViewStatusDoNotDisturb(), "View.Status.CheckDoNotDisturb");
@@ -12062,7 +12211,6 @@ void initialize_menus()
 	view_listener_t::addMenu(new LLAdvancedCheckWireframe(), "Advanced.CheckWireframe");
 	// Develop > Render
 	view_listener_t::addMenu(new LLAdvancedEnableObjectObjectOcclusion(), "Advanced.EnableObjectObjectOcclusion");
-	view_listener_t::addMenu(new LLAdvancedEnableRenderFBO(), "Advanced.EnableRenderFBO");
 	view_listener_t::addMenu(new LLAdvancedEnableRenderDeferred(), "Advanced.EnableRenderDeferred");
 	view_listener_t::addMenu(new LLAdvancedEnableRenderDeferredOptions(), "Advanced.EnableRenderDeferredOptions");
 	view_listener_t::addMenu(new LLAdvancedToggleRandomizeFramerate(), "Advanced.ToggleRandomizeFramerate");
@@ -12175,6 +12323,9 @@ void initialize_menus()
 	view_listener_t::addMenu(new LLAdvancedDisableMessageLog(), "Advanced.DisableMessageLog");
 	view_listener_t::addMenu(new LLAdvancedDropPacket(), "Advanced.DropPacket");
 
+    // Advanced > Cache
+    view_listener_t::addMenu(new LLAdvancedPurgeDiskCache(), "Advanced.PurgeDiskCache");
+
 	// Advanced > Recorder
 	view_listener_t::addMenu(new LLAdvancedAgentPilot(), "Advanced.AgentPilot");
 	view_listener_t::addMenu(new LLAdvancedToggleAgentPilotLoop(), "Advanced.ToggleAgentPilotLoop");
@@ -12185,10 +12336,13 @@ void initialize_menus()
 	view_listener_t::addMenu(new LLAdvancedForceErrorBreakpoint(), "Advanced.ForceErrorBreakpoint");
 	view_listener_t::addMenu(new LLAdvancedForceErrorLlerror(), "Advanced.ForceErrorLlerror");
 	view_listener_t::addMenu(new LLAdvancedForceErrorBadMemoryAccess(), "Advanced.ForceErrorBadMemoryAccess");
+	view_listener_t::addMenu(new LLAdvancedForceErrorBadMemoryAccessCoro(), "Advanced.ForceErrorBadMemoryAccessCoro");
 	view_listener_t::addMenu(new LLAdvancedForceErrorInfiniteLoop(), "Advanced.ForceErrorInfiniteLoop");
 	view_listener_t::addMenu(new LLAdvancedForceErrorSoftwareException(), "Advanced.ForceErrorSoftwareException");
+	view_listener_t::addMenu(new LLAdvancedForceErrorSoftwareExceptionCoro(), "Advanced.ForceErrorSoftwareExceptionCoro");
 	view_listener_t::addMenu(new LLAdvancedForceErrorDriverCrash(), "Advanced.ForceErrorDriverCrash");
-    view_listener_t::addMenu(new LLAdvancedForceErrorCoroutineCrash(), "Advanced.ForceErrorCoroutineCrash");
+    // <FS:Ansariel> Wrongly merged back in by LL
+    //view_listener_t::addMenu(new LLAdvancedForceErrorCoroutineCrash(), "Advanced.ForceErrorCoroutineCrash");
     view_listener_t::addMenu(new LLAdvancedForceErrorThreadCrash(), "Advanced.ForceErrorThreadCrash");
 	view_listener_t::addMenu(new LLAdvancedForceErrorDisconnectViewer(), "Advanced.ForceErrorDisconnectViewer");
 
@@ -12288,12 +12442,14 @@ void initialize_menus()
 	view_listener_t::addMenu(new LLAvatarTexRefresh(), "Avatar.TexRefresh");	// ## Zi: Texture Refresh
 
 	view_listener_t::addMenu(new LLAvatarToggleMyProfile(), "Avatar.ToggleMyProfile");
+	view_listener_t::addMenu(new LLAvatarTogglePicks(), "Avatar.TogglePicks");
 	view_listener_t::addMenu(new LLAvatarToggleSearch(), "Avatar.ToggleSearch");
 	view_listener_t::addMenu(new LLAvatarResetSkeleton(), "Avatar.ResetSkeleton");
 	view_listener_t::addMenu(new LLAvatarEnableResetSkeleton(), "Avatar.EnableResetSkeleton");
 	view_listener_t::addMenu(new LLAvatarResetSkeletonAndAnimations(), "Avatar.ResetSkeletonAndAnimations");
 	view_listener_t::addMenu(new LLAvatarResetSelfSkeletonAndAnimations(), "Avatar.ResetSelfSkeletonAndAnimations");
 	enable.add("Avatar.IsMyProfileOpen", boost::bind(&my_profile_visible));
+    enable.add("Avatar.IsPicksTabOpen", boost::bind(&picks_tab_visible));
 
 	commit.add("Avatar.OpenMarketplace", boost::bind(&LLWeb::loadURLExternal, gSavedSettings.getString("MarketplaceURL")));
 	
@@ -12378,6 +12534,7 @@ void initialize_menus()
 	view_listener_t::addMenu(new LLToggleSpeak(), "ToggleSpeak");
 	view_listener_t::addMenu(new LLPromptShowURL(), "PromptShowURL");
 	view_listener_t::addMenu(new LLShowAgentProfile(), "ShowAgentProfile");
+    view_listener_t::addMenu(new LLShowAgentProfilePicks(), "ShowAgentProfilePicks");
 	view_listener_t::addMenu(new LLToggleAgentProfile(), "ToggleAgentProfile");
 	view_listener_t::addMenu(new LLToggleControl(), "ToggleControl");
     view_listener_t::addMenu(new LLToggleShaderControl(), "ToggleShaderControl");

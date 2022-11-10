@@ -1636,13 +1636,13 @@ Veuillez ne sélectionner qu&apos;un seul objet.
 		Impossible de definir les textures de la région :
 La texture du terrain [TEXTURE_NUM] a une profondeur invalide ([TEXTURE_BIT_DEPTH]).
 
-Remplacer la texture [TEXTURE_NUM] avec une image de 24 bits, 512 X 512, ou plus petite, puis cliquez à nouveau sur Appliquer.
+Remplacer la texture [TEXTURE_NUM] avec une image de 24 bits, [MAX_SIZE]x[MAX_SIZE], ou plus petite, puis cliquez à nouveau sur Appliquer.
 	</notification>
 	<notification name="InvalidTerrainSize">
 		Impossible de definir les textures de la région :
 La texture du terrain [TEXTURE_NUM] est trop volumineuse ([TEXTURE_SIZE_X] X [TEXTURE_SIZE_Y]).
 
-Remplacer la texture [TEXTURE_NUM] avec une image de 24 bits, 512 X 512, ou plus petite, puis cliquez à nouveau sur Appliquer.
+Remplacer la texture [TEXTURE_NUM] avec une image de 24 bits, [MAX_SIZE]x[MAX_SIZE], ou plus petite, puis cliquez à nouveau sur Appliquer.
 	</notification>
 	<notification name="RawUploadStarted">
 		Le chargement a commencé. Cela va prendre une à deux minutes,
@@ -4635,7 +4635,7 @@ Elle est peut-être pleine ou sur le point de redémarrer.
 		Vous ne pouvez pas changer la forme d&apos;un objet avec maillage.
 	</notification>
 	<notification name="FullRegionCantEnter">
-		Vous ne pouvez pas pénétrer dans cette région car \ncar la région est pleine.
+		Vous ne pouvez pas pénétrer dans cette région car car la région est pleine.
 	</notification>
 	<notification name="LinkFailedOwnersDiffer">
 		Échec du lien -- les propriétaires sont différents
@@ -4939,7 +4939,7 @@ Veuillez sélectionner un terrain plus petit.
 		Impossible d&apos;acheter le pass actuellement.  Réessayez ultérieurement.
 	</notification>
 	<notification name="CantCreateObjectParcelFull">
-		Création de l&apos;objet impossible car \nla parcelle est pleine.
+		Création de l&apos;objet impossible car la parcelle est pleine.
 	</notification>
 	<notification name="FailedPlacingObject">
 		Échec du placement de l&apos;objet à l&apos;emplacement spécifié.  Veuillez réessayer.

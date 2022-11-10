@@ -399,6 +399,9 @@ U32 LLMeshRepository::sLODPending = 0;
 
 U32 LLMeshRepository::sCacheBytesRead = 0;
 U32 LLMeshRepository::sCacheBytesWritten = 0;
+U32 LLMeshRepository::sCacheBytesHeaders = 0;
+U32 LLMeshRepository::sCacheBytesSkins = 0;
+U32 LLMeshRepository::sCacheBytesDecomps = 0;
 U32 LLMeshRepository::sCacheReads = 0;
 U32 LLMeshRepository::sCacheWrites = 0;
 U32 LLMeshRepository::sMaxLockHoldoffs = 0;
@@ -1990,6 +1993,7 @@ EMeshProcessingResult LLMeshRepoThread::headerReceived(const LLVolumeParams& mes
 			LLMutexLock lock(mHeaderMutex);
 			mMeshHeaderSize[mesh_id] = header_size;
 			mMeshHeader[mesh_id] = header;
+            LLMeshRepository::sCacheBytesHeaders += header_size;
 		}
 
 		
@@ -2178,17 +2182,6 @@ EMeshProcessingResult LLMeshRepoThread::physicsShapeReceived(const LLUUID& mesh_
 		// if (volume->unpackVolumeFaces(stream, data_size))
 		if (volume->unpackVolumeFaces(data, data_size))
 		{
-			//load volume faces into decomposition buffer
-			S32 vertex_count = 0;
-			S32 index_count = 0;
-
-			for (S32 i = 0; i < volume->getNumVolumeFaces(); ++i)
-			{
-				const LLVolumeFace& face = volume->getVolumeFace(i);
-				vertex_count += face.mNumVertices;
-				index_count += face.mNumIndices;
-			}
-
 			d->mPhysicsShapeMesh.clear();
 
 			std::vector<LLVector3>& pos = d->mPhysicsShapeMesh.mPositions;
@@ -3144,27 +3137,6 @@ S32 LLMeshRepository::getActualMeshLOD(LLSD& header, S32 lod)
 	//header exists and no good lod found, treat as 404
 	header["404"] = 1;
 	return -1;
-}
-
-void LLMeshRepository::cacheOutgoingMesh(LLMeshUploadData& data, LLSD& header)
-{
-	mThread->mMeshHeader[data.mUUID] = header;
-
-	// we cache the mesh for default parameters
-	LLVolumeParams volume_params;
-	volume_params.setType(LL_PCODE_PROFILE_SQUARE, LL_PCODE_PATH_LINE);
-	volume_params.setSculptID(data.mUUID, LL_SCULPT_TYPE_MESH);
-
-	for (U32 i = 0; i < 4; i++)
-	{
-		if (data.mModel[i].notNull())
-		{
-			LLPointer<LLVolume> volume = new LLVolume(volume_params, LLVolumeLODGroup::getVolumeScaleFromDetail(i));
-			volume->copyVolumeFaces(data.mModel[i]);
-			volume->setMeshAssetLoaded(TRUE);
-		}
-	}
-
 }
 
 // Handle failed or successful requests for mesh assets.
@@ -4155,6 +4127,8 @@ void LLMeshRepository::notifyLoadedMeshes()
 void LLMeshRepository::notifySkinInfoReceived(LLMeshSkinInfo& info)
 {
 	mSkinMap[info.mMeshID] = info;
+    // Alternative: We can get skin size from header
+    sCacheBytesSkins += info.sizeBytes();
 
 	skin_load_map::iterator iter = mLoadingSkins.find(info.mMeshID);
 	if (iter != mLoadingSkins.end())
@@ -4178,10 +4152,14 @@ void LLMeshRepository::notifyDecompositionReceived(LLModel::Decomposition* decom
 	{ //just insert decomp into map
 		mDecompositionMap[decomp->mMeshID] = decomp;
 		mLoadingDecompositions.erase(decomp->mMeshID);
+        sCacheBytesDecomps += decomp->sizeBytes();
 	}
 	else
 	{ //merge decomp with existing entry
+        sCacheBytesDecomps -= iter->second->sizeBytes();
 		iter->second->merge(decomp);
+        sCacheBytesDecomps += iter->second->sizeBytes();
+
 		mLoadingDecompositions.erase(decomp->mMeshID);
 		delete decomp;
 	}

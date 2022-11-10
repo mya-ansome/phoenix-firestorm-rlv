@@ -93,8 +93,8 @@ if(WINDOWS)
 
     set(release_files ${release_files} growl++.dll growl.dll )
     if (FMODSTUDIO)
-      set(debug_files ${debug_files} fmodL.dll)
-      set(release_files ${release_files} fmod.dll)
+        set(debug_files ${debug_files} fmodL.dll)
+        set(release_files ${release_files} fmod.dll)
     endif (FMODSTUDIO)
 
     if (OPENAL)
@@ -253,7 +253,7 @@ elseif(LINUX)
         #libopenjpeg.so
         libuuid.so.16
         libuuid.so.16.0.22
-        libfontconfig.so.1.8.0
+        libfontconfig.so.1.10.1
         libfontconfig.so.1
         libaprutil-1.so.0
         libapr-1.so.0

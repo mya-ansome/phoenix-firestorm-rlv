@@ -48,6 +48,7 @@
 #include "llui.h"
 #include "llviewerinventory.h"
 #include "llpermissions.h"
+#include "llpreviewtexture.h"
 #include "llsaleinfo.h"
 #include "llassetstorage.h"
 #include "lltextbox.h"
@@ -1380,16 +1381,15 @@ LLTextureCtrl::LLTextureCtrl(const LLTextureCtrl::Params& p)
 	mNeedsRawImageData( FALSE ),
 	mValid( TRUE ),
 	mShowLoadingPlaceholder( TRUE ),
+	mOpenTexPreview(!p.enabled),  // <FS:Ansariel> For texture preview mode
 	mImageAssetID(p.image_id),
 	mDefaultImageAssetID(p.default_image_id),
 	mDefaultImageName(p.default_image_name),
 	mFallbackImage(p.fallback_image),
 	// <FS:Ansariel> Mask texture if desired
-	mIsMasked(FALSE),
-	// </FS:Ansariel> Mask texture if desired
-	mPreviewMode(!p.enabled) // <FS:Ansariel> For texture preview mode
+	mIsMasked(FALSE)
 {
-
+	mCaptionHeight = p.show_caption ? BTN_HEIGHT_SMALL : 0;		// <FS:Zi> leave some room underneath the image for the caption
 	// Default of defaults is white image for diff tex
 	//
 	LLUUID whiteImage( gSavedSettings.getString( "UIImgWhiteUUID" ) );
@@ -1408,7 +1408,9 @@ LLTextureCtrl::LLTextureCtrl(const LLTextureCtrl::Params& p)
 	addChild( mCaption );
 
 	S32 image_top = getRect().getHeight();
-	S32 image_bottom = BTN_HEIGHT_SMALL;
+	// <FS:Zi> leave some room underneath the image for the caption
+	// S32 image_bottom = BTN_HEIGHT_SMALL;
+	S32 image_bottom = mCaptionHeight;
 	S32 image_middle = (image_top + image_bottom) / 2;
 	S32 line_height = LLFontGL::getFontSansSerifSmall()->getLineHeight();
 
@@ -1427,7 +1429,9 @@ LLTextureCtrl::LLTextureCtrl(const LLTextureCtrl::Params& p)
 	addChild( mTentativeLabel );
 
 	LLRect border_rect = getLocalRect();
-	border_rect.mBottom += BTN_HEIGHT_SMALL;
+	// <FS:Zi> leave some room underneath the image for the caption
+	// border_rect.mBottom += BTN_HEIGHT_SMALL;
+	border_rect.mBottom += mCaptionHeight;
 	LLViewBorder::Params vbparams(p.border);
 	vbparams.name("border");
 	vbparams.rect(border_rect);
@@ -1513,7 +1517,7 @@ void LLTextureCtrl::setEnabled( BOOL enabled )
 	// <FS:Ansariel> Texture preview mode
 	//LLView::setEnabled( enabled );
 	LLView::setEnabled( (enabled || getValue().asUUID().notNull()) );
-	mPreviewMode = !enabled;
+	mOpenTexPreview = !enabled;
 	// </FS:Ansariel>
 }
 
@@ -1651,13 +1655,7 @@ BOOL LLTextureCtrl::handleMouseDown(S32 x, S32 y, MASK mask)
 
 	if (!handled && mBorder->parentPointInView(x, y))
 	{
-		// <FS:Ansariel> Texture preview mode
-		//showPicker(FALSE);
-		////grab textures first...
-		//LLInventoryModelBackgroundFetch::instance().start(gInventory.findCategoryUUIDForType(LLFolderType::FT_TEXTURE));
-		////...then start full inventory fetch.
-		//LLInventoryModelBackgroundFetch::instance().start();
-		if (!mPreviewMode)
+		if (!mOpenTexPreview)
 		{
 			showPicker(FALSE);
 			//grab textures first...
@@ -1665,6 +1663,23 @@ BOOL LLTextureCtrl::handleMouseDown(S32 x, S32 y, MASK mask)
 			//...then start full inventory fetch.
 			LLInventoryModelBackgroundFetch::instance().start();
 		}
+		// <FS:Ansariel> Texture preview mode
+		//else
+		//{
+		//	if (getImageAssetID().notNull())
+		//	{
+		//		LLPreviewTexture* preview_texture = LLFloaterReg::showTypedInstance<LLPreviewTexture>("preview_texture", getValue());
+		//		if (preview_texture && !preview_texture->isDependent())
+		//		{
+		//			LLFloater* root_floater = gFloaterView->getParentFloater(this);
+		//			if (root_floater)
+		//			{
+		//				root_floater->addDependentFloater(preview_texture);
+		//				preview_texture->hideCtrlButtons();
+		//			}
+		//		}
+		//	}
+		//}
 		else if (!mIsMasked)
 		{
 			// Open the preview floater for the texture
@@ -1811,7 +1826,7 @@ BOOL LLTextureCtrl::handleDragAndDrop(S32 x, S32 y, MASK mask,
 
 	// <FS:Ansariel> FIRE-10125: Texture picker allows dragging of textures while in preview mode
 	//if (getEnabled() &&
-	if (getEnabled() && !mPreviewMode &&
+	if (getEnabled() && !mOpenTexPreview &&
 	// </FS:Ansariel>
 		((cargo_type == DAD_TEXTURE) || is_mesh) &&
 		 allowDrop(item))
@@ -1882,7 +1897,9 @@ void LLTextureCtrl::draw()
 	}
 	
 	// Border
-	LLRect border( 0, getRect().getHeight(), getRect().getWidth(), BTN_HEIGHT_SMALL );
+	// <FS:Zi> leave some room underneath the image for the caption
+	// LLRect border( 0, getRect().getHeight(), getRect().getWidth(), BTN_HEIGHT_SMALL );
+	LLRect border( 0, getRect().getHeight(), getRect().getWidth(), mCaptionHeight );
 	gl_rect_2d( border, mBorderColor.get(), FALSE );
 
 	// Interior
@@ -2027,7 +2044,7 @@ BOOL LLTextureCtrl::handleUnicodeCharHere(llwchar uni_char)
 	{
 		// <FS:Ansariel> Texture preview mode
 		//showPicker(TRUE);
-		if (!mPreviewMode)
+		if (!mOpenTexPreview)
 		{
 			showPicker(TRUE);
 			//grab textures first...
@@ -2055,7 +2072,7 @@ void LLTextureCtrl::setValue( const LLSD& value )
 	//setImageAssetID(value.asUUID());
 	LLUUID uuid = value.asUUID();
 	setImageAssetID(uuid);
-	LLView::setEnabled( (!mPreviewMode || uuid.notNull()) );
+	LLView::setEnabled( (!mOpenTexPreview || uuid.notNull()) );
 	// </FS:Ansariel>
 }
 

@@ -552,9 +552,9 @@ void LLNavigationBar::onLocationSelection()
 			
 			if(value.has("AssetUUID"))
 			{
-				
 				gAgent.teleportViaLandmark( LLUUID(value["AssetUUID"].asString()));
-				mSaveToLocationHistory = true;
+                // user teleported by manually inputting inventory landmark's name
+				mSaveToLocationHistory = false;
 				return;
 			}
 			else
@@ -870,7 +870,7 @@ void LLNavigationBar::resizeLayoutPanel()
 }
 void LLNavigationBar::invokeSearch(std::string search_text)
 {
-	LLFloaterReg::showInstance("search", LLSD().with("category", "all").with("query", LLSD(search_text)));
+	LLFloaterReg::showInstance("search", LLSD().with("category", "standard").with("query", LLSD(search_text)));
 }
 
 void LLNavigationBar::clearHistoryCache()
@@ -902,6 +902,11 @@ void LLNavigationBar::clearHistory()
 LLView* LLNavigationBar::getView()
 {
 	return mView;
+}
+
+bool LLNavigationBar::isRebakeNavMeshAvailable()
+{
+    return mCmbLocation->isNavMeshDirty();
 }
 
 void LLNavigationBar::onRightMouseDown(S32 x,S32 y,MASK mask)

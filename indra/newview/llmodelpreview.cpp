@@ -90,6 +90,7 @@ bool LLModelPreview::sIgnoreLoadedCallback = false;
 // static const F32 PREVIEW_DEG_POINT_SIZE(8.f);
 // static const F32 PREVIEW_ZOOM_LIMIT(10.f);
 // </FS:Beq>
+static const std::string DEFAULT_PHYSICS_MESH_NAME = "default_physics_shape";
 const F32 SKIN_WEIGHT_CAMERA_DISTANCE = 16.f;
 
 #include "glod/glod.h" // <FS:Beq/> More flexible LOD generation
@@ -635,6 +636,20 @@ void LLModelPreview::rebuildUploadData()
                         LL_INFOS() << out.str() << LL_ENDL;
                         LLFloaterModelPreview::addStringToLog(out, false);
                     }
+                }
+                if (mWarnOfUnmatchedPhyicsMeshes && !lod_model && (i == LLModel::LOD_PHYSICS))
+                {
+                    // Despite the various strategies above, if we don't now have a physics model, we're going to end up with decomposition.
+                    // That's ok, but might not what they wanted. Use default_physics_shape if found.
+                    std::ostringstream out;
+                    out << "No physics model specified for " << instance.mLabel;
+                    if (mDefaultPhysicsShapeP)
+                    {
+                        out << " - using: " << DEFAULT_PHYSICS_MESH_NAME;
+                        lod_model = mDefaultPhysicsShapeP;
+                    }
+                    LL_WARNS() << out.str() << LL_ENDL;
+                    LLFloaterModelPreview::addStringToLog(out, !mDefaultPhysicsShapeP); // Flash log tab if no default.
                 }
 
                 if (lod_model)
@@ -1319,6 +1334,13 @@ void LLModelPreview::loadModelCallback(S32 loaded_lod)
         }
         else
         {
+            if (loaded_lod == LLModel::LOD_PHYSICS)
+            {   // Explicitly loading physics. See if there is a default mesh.
+                LLMatrix4 ignored_transform; // Each mesh that uses this will supply their own.
+                mDefaultPhysicsShapeP = nullptr;
+                FindModel(mScene[loaded_lod], DEFAULT_PHYSICS_MESH_NAME + getLodSuffix(loaded_lod), mDefaultPhysicsShapeP, ignored_transform);
+                mWarnOfUnmatchedPhyicsMeshes = true;
+            }
             BOOL legacyMatching = gSavedSettings.getBOOL("ImporterLegacyMatching");
             if (!legacyMatching)
             {
@@ -1389,7 +1411,6 @@ void LLModelPreview::loadModelCallback(S32 loaded_lod)
                                     LL_WARNS() << out.str() << LL_ENDL;
                                     LLFloaterModelPreview::addStringToLog(out, false);
                                 }
-
                                 mModel[loaded_lod][idx]->mLabel = name;
                             }
                         }
@@ -2488,14 +2509,17 @@ void LLModelPreview::genMeshOptimizerLODs(S32 which_lod, S32 meshopt_mode, U32 d
 {
     // <FS:Beq> Log things properly
     // LL_INFOS() << "Generating lod " << which_lod << " using meshoptimizer" << LL_ENDL;
-    std::ostringstream out;
-    out << "Generating lod " << which_lod << " using meshoptimizer";
-    LL_INFOS("MeshUpload") << out.str() << LL_ENDL;
-    LLFloaterModelPreview::addStringToLog(out, false);
+    {
+        std::ostringstream out;
+        out << "Generating lod " << which_lod << " using meshoptimizer";
+        LL_INFOS("MeshUpload") << out.str() << LL_ENDL;
+        LLFloaterModelPreview::addStringToLog(out, false);
+    }
+    // </FS:Beq>
     // Allow LoD from -1 to LLModel::LOD_PHYSICS
     if (which_lod < -1 || which_lod > LLModel::NUM_LODS - 1)
     {
-        // std::ostringstream out; // <FS:Beq/> already instantiated
+        std::ostringstream out; 
         out << "Invalid level of detail: " << which_lod;
         LL_WARNS() << out.str() << LL_ENDL;
         LLFloaterModelPreview::addStringToLog(out, true); // <FS:Beq/> if you don't flash the log tab on error when do you?
@@ -2705,7 +2729,11 @@ void LLModelPreview::genMeshOptimizerLODs(S32 which_lod, S32 meshopt_mode, U32 d
                         // (indices_decimator / res_ratio) by itself is likely to overshoot to a differend
                         // side due to overal lack of precision, and we don't need an ideal result, which
                         // likely does not exist, just a better one, so a partial correction is enough.
-                        F32 sloppy_decimator = indices_decimator * (indices_decimator / sloppy_ratio + 1) / 2;
+                        F32 sloppy_decimator{indices_decimator};
+                        // if(sloppy_ratio > 0)
+                        // {
+                        sloppy_decimator = indices_decimator * (indices_decimator / sloppy_ratio + 1) / 2;
+                        // }
                         sloppy_ratio = genMeshOptimizerPerModel(base, target_model, sloppy_decimator, lod_error_threshold, MESH_OPTIMIZER_NO_TOPOLOGY);
                     }
 
@@ -2730,11 +2758,12 @@ void LLModelPreview::genMeshOptimizerLODs(S32 which_lod, S32 meshopt_mode, U32 d
                         // to work on a first try of sloppy due to having more viggle room.
                         // If they didn't, something is likely wrong, no point locking the
                         // thread in a long calculation that will fail.
-                        const U32 too_many_vertices = 27000;
+                        const U32 too_many_vertices = 65535;
                         if (size_vertices > too_many_vertices)
                         {
                             // <FS:Beq> log this properly. 
                             // LL_WARNS() << "Sloppy optimization method failed for a complex model " << target_model->getName() << LL_ENDL;
+                            std::ostringstream out;
                             out << "Sloppy optimization method failed for a complex model " << target_model->getName();
                             LL_WARNS() << out.str() << LL_ENDL;
                             LLFloaterModelPreview::addStringToLog(out, true);
@@ -2777,12 +2806,16 @@ void LLModelPreview::genMeshOptimizerLODs(S32 which_lod, S32 meshopt_mode, U32 d
                         //     << " lod " << which_lod
                         //     << " resulting ratio " << precise_ratio
                         //     << " simplified using per model method." << LL_ENDL;
-                        out << "Model " << target_model->getName()
-                            << " lod " << which_lod
-                            << " resulting ratio " << precise_ratio
-                            << " simplified using per model method.";
-                        LL_INFOS() << out.str() << LL_ENDL;
-                        LLFloaterModelPreview::addStringToLog(out, false);
+                        {
+                            std::ostringstream out;
+                            out << "Model " << target_model->getName()
+                                << " lod " << which_lod
+                                << " resulting ratio " << precise_ratio
+                                << " simplified using per model method.";
+                            LL_INFOS() << out.str() << LL_ENDL;
+                            LLFloaterModelPreview::addStringToLog(out, false);
+                        }
+                        // </FS:Beq>
                     }
                     else
                     {
@@ -2791,12 +2824,14 @@ void LLModelPreview::genMeshOptimizerLODs(S32 which_lod, S32 meshopt_mode, U32 d
                         //     << " lod " << which_lod
                         //     << " resulting ratio " << sloppy_ratio
                         //     << " sloppily simplified using per model method." << LL_ENDL;
+                        std::ostringstream out;
                         out << "Model " << target_model->getName()
                             << " lod " << which_lod
                             << " resulting ratio " << sloppy_ratio
                             << " sloppily simplified using per model method.";
                         LL_INFOS() << out.str() << LL_ENDL;
                         LLFloaterModelPreview::addStringToLog(out, false);
+                        // </FS:Beq>
                     }
                 }
                 else
@@ -2806,12 +2841,14 @@ void LLModelPreview::genMeshOptimizerLODs(S32 which_lod, S32 meshopt_mode, U32 d
                         //     << " lod " << which_lod
                         //     << " resulting ratio " << precise_ratio
                         //     << " simplified using per model method." << LL_ENDL;
+                        std::ostringstream out;
                         out << "Bad MeshOptimisation result for Model " << target_model->getName()
                             << " lod " << which_lod
                             << " resulting ratio " << precise_ratio
                             << " simplified using per model method.";
                         LL_WARNS() << out.str() << LL_ENDL;
                         LLFloaterModelPreview::addStringToLog(out, true);
+                        // </FS:Beq>
                 }
             }
 
@@ -3278,7 +3315,6 @@ void LLModelPreview::updateStatusMessages()
         out << "Loader returned errors, model can't be uploaded";
         LL_INFOS() << out.str() << LL_ENDL;
         LLFloaterModelPreview::addStringToLog(out, true);
-        out.str("");
         // </FS:Beq>
     }
 
@@ -3296,7 +3332,6 @@ void LLModelPreview::updateStatusMessages()
             out << "Invalid rig, there might be issues with uploading Joint positions";
             LL_INFOS() << out.str() << LL_ENDL;
             LLFloaterModelPreview::addStringToLog(out, true);
-            out.str("");
             // </FS:Beq>
         }
     }
@@ -3668,8 +3703,6 @@ void LLModelPreview::clearBuffers()
 
 void LLModelPreview::genBuffers(S32 lod, bool include_skin_weights)
 {
-    U32 tri_count = 0;
-    U32 vertex_count = 0;
     U32 mesh_count = 0;
 
 
@@ -3702,7 +3735,6 @@ void LLModelPreview::genBuffers(S32 lod, bool include_skin_weights)
             continue;
         }
 
-        LLModel* base_mdl = *base_iter;
         base_iter++;
 
         S32 num_faces = mdl->getNumVolumeFaces();
@@ -3779,7 +3811,7 @@ void LLModelPreview::genBuffers(S32 lod, bool include_skin_weights)
                     //find closest weight to vf.mVertices[i].mPosition
                     LLVector3 pos(vf.mPositions[i].getF32ptr());
 
-                    const LLModel::weight_list& weight_list = base_mdl->getJointInfluences(pos);
+                    const LLModel::weight_list& weight_list = mdl->getJointInfluences(pos);
                     llassert(weight_list.size()>0 && weight_list.size() <= 4); // LLModel::loadModel() should guarantee this
 
                     LLVector4 w(0, 0, 0, 0);
@@ -3809,10 +3841,7 @@ void LLModelPreview::genBuffers(S32 lod, bool include_skin_weights)
 
             mVertexBuffer[lod][mdl].push_back(vb);
 
-            vertex_count += num_vertices;
-            tri_count += num_indices / 3;
             ++mesh_count;
-
         }
     }
 }
@@ -3867,7 +3896,6 @@ void LLModelPreview::createPreviewAvatar(void)
         out << "Failed to create preview avatar for upload model window";
         LL_INFOS() << out.str() << LL_ENDL;
         LLFloaterModelPreview::addStringToLog(out, true);
-        out.str("");
         // </FS:Beq>
     }
 }
@@ -3915,6 +3943,20 @@ void LLModelPreview::loadedCallback(
         {
             pPreview->lookupLODModelFiles(lod);
         }
+
+        const LLVOAvatar* avatarp = pPreview->getPreviewAvatar();
+        if (avatarp) { // set up ground plane for possible rendering
+            const LLVector3 root_pos = avatarp->mRoot->getPosition();
+            const LLVector4a* ext = avatarp->mDrawable->getSpatialExtents();
+            const LLVector4a min = ext[0], max = ext[1];
+            const F32 center = (max[2] - min[2]) * 0.5f;
+            const F32 ground = root_pos[2] - center;
+            auto plane = pPreview->mGroundPlane;
+            plane[0] = {min[0], min[1], ground};
+            plane[1] = {max[0], min[1], ground};
+            plane[2] = {max[0], max[1], ground};
+            plane[3] = {min[0], max[1], ground};
+        }
     }
 
 }
@@ -3956,6 +3998,7 @@ void LLModelPreview::lookupLODModelFiles(S32 lod)
         out << "Auto Loading LOD" << next_lod << " from " << lod_filename;
         LL_INFOS() << out.str() << LL_ENDL;
         LLFloaterModelPreview::addStringToLog(out, true);
+        out.str("");
         // </FS:Beq>
         LLFloaterModelPreview* fmp = LLFloaterModelPreview::sInstance;
         if (fmp)
@@ -4183,6 +4226,9 @@ BOOL LLModelPreview::render()
                     fmp->setViewOptionEnabled("show_joint_positions", upload_skin);
                     // </FS:Beq>
                     mFirstSkinUpdate = false;
+                    upload_skin = true;
+                    skin_weight = true;
+                    mViewOption["show_skin_weight"] = true;
                 }
                 // <FS:Beq> BUG-229632 auto enable weights slows manual workflow
                 // fmp->enableViewOption("show_skin_weight");
@@ -4853,6 +4899,7 @@ BOOL LLModelPreview::render()
                 {
                     getPreviewAvatar()->renderBones();
                 }
+                renderGroundPlane(mPelvisZOffset);
                 if (shader)
                 {
                     shader->bind();
@@ -4873,6 +4920,28 @@ BOOL LLModelPreview::render()
 
     return TRUE;
 }
+
+void LLModelPreview::renderGroundPlane(float z_offset)
+{   // Not necesarilly general - beware - but it seems to meet the needs of LLModelPreview::render
+
+	gGL.diffuseColor3f( 1.0f, 0.0f, 1.0f );
+
+	gGL.begin(LLRender::LINES);
+	gGL.vertex3fv(mGroundPlane[0].mV);
+	gGL.vertex3fv(mGroundPlane[1].mV);
+
+	gGL.vertex3fv(mGroundPlane[1].mV);
+	gGL.vertex3fv(mGroundPlane[2].mV);
+
+	gGL.vertex3fv(mGroundPlane[2].mV);
+	gGL.vertex3fv(mGroundPlane[3].mV);
+
+	gGL.vertex3fv(mGroundPlane[3].mV);
+	gGL.vertex3fv(mGroundPlane[0].mV);
+
+	gGL.end();
+}
+
 
 //-----------------------------------------------------------------------------
 // refresh()
