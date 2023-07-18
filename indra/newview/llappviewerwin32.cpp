@@ -472,8 +472,6 @@ int APIENTRY WINMAIN(HINSTANCE hInstance,
 
 	gOldTerminateHandler = std::set_terminate(exceptionTerminateHandler);
 
-	viewer_app_ptr->setErrorHandler(LLAppViewer::handleViewerCrash);
-
 	// Set a debug info flag to indicate if multiple instances are running.
 	bool found_other_instance = !create_app_mutex();
 	gDebugInfo["FoundOtherInstanceAtStartup"] = LLSD::Boolean(found_other_instance);
@@ -1196,7 +1194,7 @@ DWORD WINAPI purgeThread( LPVOID lpParameter )
 
 	for( auto dir : vctDirs )
 	{
-		LL_INFOS("CachePurge") << "Removing an old cache" << LL_ENDL;
+		LL_INFOS("LLDiskCache") << "Removing an old cache" << LL_ENDL; // <FS:Beq/> consistent tagging to help searching log files
 		deleteCacheDirectory( dir );
 	}
 
@@ -1214,7 +1212,7 @@ void LLAppViewerWin32::startCachePurge()
 
 	if( !hThread )
 	{
-		LL_WARNS("CachePurge") << "CreateThread failed: "  << GetLastError() << LL_ENDL;
+		LL_WARNS("LLDiskCache") << "CreateThread failed: "  << GetLastError() << LL_ENDL; // <FS:Beq/> consistent tagging to help searching log files
 	}
 	else
 		SetThreadPriority( hThread, THREAD_MODE_BACKGROUND_BEGIN );
