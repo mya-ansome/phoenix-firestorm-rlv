@@ -298,9 +298,19 @@ public:
 	boost::signals2::connection     addRegionChangedCallback(const region_changed_signal_t::slot_type& cb);
 	void                            removeRegionChangedCallback(boost::signals2::connection callback);
 
+
+	void changeInterestListMode(const std::string & new_mode);
+    const std::string & getInterestListMode() const { return mInterestListMode; }
+
 private:
 	LLViewerRegion	*mRegionp;
 	region_changed_signal_t		            mRegionChangedSignal;
+
+    std::string								mInterestListMode;	// How agent wants regions to send updates
+	// <FS:Beq> Area search fixes
+	bool mFSAreaSearchActive;
+	bool m360CaptureActive;
+	// </FS:Beq>
 
 	//--------------------------------------------------------------------
 	// History
@@ -309,6 +319,12 @@ public:
 	S32				getRegionsVisited() const;
 	F64				getDistanceTraveled() const;	
 	void			setDistanceTraveled(F64 dist) { mDistanceTraveled = dist; }
+	// <FS:Beq> Area search fixes
+	void			setFSAreaSearchActive(bool enabled) { mFSAreaSearchActive = enabled; }
+	void			set360CaptureActive(bool enabled) { m360CaptureActive = enabled; }
+	bool			getFSAreaSearchActive() const { return mFSAreaSearchActive; }
+	bool			get360CaptureActive() const { return m360CaptureActive; }
+	// </FS:Beq>
 	
 	const LLVector3d &getLastPositionGlobal() const { return mLastPositionGlobal; }
 	void			setLastPositionGlobal(const LLVector3d &pos) { mLastPositionGlobal = pos; }
@@ -638,7 +654,6 @@ public:
 	void			roll(F32 angle);
 	void			yaw(F32 angle);
 	LLVector3		getReferenceUpVector();
-    F32             clampPitchToLimits(F32 angle);
 
 	//--------------------------------------------------------------------
 	// Autopilot
