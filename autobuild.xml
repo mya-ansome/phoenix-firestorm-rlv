@@ -5,7 +5,7 @@
       <key>SDL2</key>
       <map>
         <key>copyright</key>
-        <string>Copyright (C) 1997-2022 Sam Lantinga</string>
+        <string>Copyright (C) 1997-2023 Sam Lantinga</string>
         <key>description</key>
         <string>Simple DirectMedia Layer is a cross-platform multimedia library designed to provide low level access to audio, keyboard, mouse, joystick, 3D hardware via OpenGL, and 2D video framebuffer.</string>
         <key>license</key>
@@ -21,9 +21,9 @@
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>ba107bef7cdb9c8548d62e749d9af6fd</string>
+              <string>535006965531b4a92e4951ee8dbe2745</string>
               <key>url</key>
-              <string>http://3p.firestormviewer.org/SDL2-2.24.1-linux64-222872152.tar.bz2</string>
+              <string>http://3p.firestormviewer.org/SDL2-2.28.4-linux64-232750919.tar.bz2</string>
             </map>
             <key>name</key>
             <string>linux64</string>
@@ -865,9 +865,9 @@
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>bacaa5403be0f1cba52b2250c2c227d9</string>
+              <string>8e92fc9ec2b3be6d2a5387fc283f954f</string>
               <key>url</key>
-              <string>http://3p.firestormviewer.org/curl-7.81.0.222121724-linux64-222121724.tar.bz2</string>
+              <string>http://3p.firestormviewer.org/curl-8.3.0.232750741-linux64-232750741.tar.bz2</string>
             </map>
             <key>name</key>
             <string>linux64</string>
@@ -1097,11 +1097,11 @@
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>8c82bd0fd9b544d02c8da1f9d921e964</string>
+              <string>14846f1a55274399362db4b674fcded6</string>
               <key>hash_algorithm</key>
               <string>md5</string>
               <key>url</key>
-              <string>file:///opt/firestorm/fmodstudio-2.02.17-linux64-232401431.tar.bz2</string>
+              <string>file:///opt/firestorm/fmodstudio-2.02.18-linux64-232801304.tar.bz2</string>
             </map>
             <key>name</key>
             <string>linux64</string>
@@ -1111,11 +1111,11 @@
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>fb5a3f97091028859ffa8c2768536b52</string>
+              <string>a2bee3384b91bf962d4d68e98bf7edd3</string>
               <key>hash_algorithm</key>
               <string>md5</string>
               <key>url</key>
-              <string>file:///c:/cygwin/opt/firestorm/fmodstudio-2.02.17-windows-232401332.tar.bz2</string>
+              <string>file:///c:/cygwin/opt/firestorm/fmodstudio-2.02.18-windows-232801154.tar.bz2</string>
             </map>
             <key>name</key>
             <string>windows</string>
@@ -1125,18 +1125,18 @@
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>f8e4fdd3eafbd54c01f5f78d04b95bf8</string>
+              <string>7b38bd83eb63f25df7c5a20070a05732</string>
               <key>hash_algorithm</key>
               <string>md5</string>
               <key>url</key>
-              <string>file:///c:/cygwin/opt/firestorm/fmodstudio-2.02.17-windows64-232401329.tar.bz2</string>
+              <string>file:///c:/cygwin/opt/firestorm/fmodstudio-2.02.18-windows64-232801156.tar.bz2</string>
             </map>
             <key>name</key>
             <string>windows64</string>
           </map>
         </map>
         <key>version</key>
-        <string>2.02.17</string>
+        <string>2.02.18</string>
       </map>
       <key>fontconfig</key>
       <map>
@@ -2457,9 +2457,9 @@ Copyright (c) 2012, 2014, 2015, 2016 nghttp2 contributors</string>
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>b460d5bac2d20b38cb73b54d0ab1b6e3</string>
+              <string>57670eaa6333d9127b8ba88f120e56dd</string>
               <key>url</key>
-              <string>http://3p.firestormviewer.org/nghttp2-1.25.0.180841549-linux64-180841549.tar.bz2</string>
+              <string>http://3p.firestormviewer.org/nghttp2-1.56.0.232750738-linux64-232750738.tar.bz2</string>
             </map>
             <key>name</key>
             <string>linux64</string>
@@ -2621,9 +2621,9 @@ Copyright (c) 2012, 2014, 2015, 2016 nghttp2 contributors</string>
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>8ad6779b81899afb7bd803ac2e2af37a</string>
+              <string>b329ed955ac63da45957d39f601e85af</string>
               <key>url</key>
-              <string>http://3p.firestormviewer.org/open_libndofdev-0.13.222872202-linux64-222872202.tar.bz2</string>
+              <string>http://3p.firestormviewer.org/open_libndofdev-0.13.232750923-linux64-232750923.tar.bz2</string>
             </map>
             <key>name</key>
             <string>linux64</string>
@@ -2785,9 +2785,9 @@ Copyright (c) 2012, 2014, 2015, 2016 nghttp2 contributors</string>
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>cdd9c6c484542a2e1be99149c4f0e75f</string>
+              <string>a3b2dbffa28a2b2a63c5d3ce2c12bc85</string>
               <key>url</key>
-              <string>http://3p.firestormviewer.org/openssl-1.1.1l.222121440-linux64-222121440.tar.bz2</string>
+              <string>http://3p.firestormviewer.org/openssl-1.1.1w.232750656-linux64-232750656.tar.bz2</string>
             </map>
             <key>name</key>
             <string>linux64</string>
