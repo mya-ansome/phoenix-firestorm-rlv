@@ -912,7 +912,25 @@ void AOEngine::cycle(eCycleMode cycleMode)
 				state->mCurrentAnimation = 0;
 			}
 		}
-		animation = state->mAnimations[state->mCurrentAnimation].mAssetUUID;
+
+		AOSet::AOAnimation& anim = state->mAnimations[state->mCurrentAnimation];
+
+		if (anim.mAssetUUID.isNull())
+		{
+			LL_DEBUGS("AOEngine") << "Asset UUID for cycled animation " << anim.mName << " not yet known, try to find it." << LL_ENDL;
+
+			if(LLViewerInventoryItem* item = gInventory.getItem(anim.mOriginalUUID) ; item)
+			{
+				LL_DEBUGS("AOEngine") << "Found asset UUID for cycled animation: " << item->getAssetUUID() << " - Updating AOAnimation.mAssetUUID" << LL_ENDL;
+				anim.mAssetUUID = item->getAssetUUID();
+			}
+			else
+			{
+				LL_DEBUGS("AOEngine") << "Inventory UUID " << anim.mOriginalUUID << " for cycled animation " << anim.mName << " still returns no asset." << LL_ENDL;
+			}
+		}
+
+		animation = anim.mAssetUUID;
 	}
 
 	// don't do anything if the animation didn't change
@@ -1001,7 +1019,7 @@ void AOEngine::addSet(const std::string& name, inventory_func_type callback, boo
 	}
 }
 
-bool AOEngine::createAnimationLink(const AOSet* set, AOSet::AOState* state, const LLInventoryItem* item)
+bool AOEngine::createAnimationLink(AOSet::AOState* state, const LLInventoryItem* item)
 {
 	LL_DEBUGS("AOEngine") << "Asset ID " << item->getAssetUUID() << " inventory id " << item->getUUID() << " category id " << state->mInventoryUUID << LL_ENDL;
 	LL_DEBUGS("AOEngine") << "state " << state->mName << " item " << item->getName() << LL_ENDL;
@@ -1021,25 +1039,59 @@ bool AOEngine::createAnimationLink(const AOSet* set, AOSet::AOState* state, cons
 	return true;
 }
 
-bool AOEngine::addAnimation(const AOSet* set, AOSet::AOState* state, const LLInventoryItem* item, bool reload)
+void AOEngine::addAnimation(const AOSet* set, AOSet::AOState* state, const LLInventoryItem* item, bool reload)
 {
 	AOSet::AOAnimation anim;
 	anim.mAssetUUID = item->getAssetUUID();
 	anim.mInventoryUUID = item->getUUID();
+	anim.mOriginalUUID = item->getLinkedUUID();
 	anim.mName = item->getName();
 	anim.mSortOrder = state->mAnimations.size() + 1;
 	state->mAnimations.push_back(anim);
 
 	BOOL wasProtected = gSavedPerAccountSettings.getBOOL("LockAOFolders");
 	gSavedPerAccountSettings.setBOOL("LockAOFolders", FALSE);
-	createAnimationLink(set, state, item);
+	bool success = createAnimationLink(state, item);
 	gSavedPerAccountSettings.setBOOL("LockAOFolders", wasProtected);
 
-	if (reload)
+	if(success)
 	{
-		mTimerCollection.enableReloadTimer(true);
+		if (reload)
+		{
+			mTimerCollection.enableReloadTimer(true);
+		}
+		return;
 	}
-	return true;
+
+	// creating the animation link failed, so we need to create a new folder for this state -
+	// add the animation asset to the queue of animations to insert into the state - this takes
+	// care of multi animation drag & drop that come in faster than the viewer can create a new
+	// inventory folder
+	state->mAddQueue.push_back(item);
+
+	// if this is the first queued animation for this state, create the folder asyncronously
+	if(state->mAddQueue.size() == 1)
+	{
+		gInventory.createNewCategory(set->getInventoryUUID(), LLFolderType::FT_NONE, state->mName, [this, state, reload, wasProtected](const LLUUID &new_cat_id)
+		{
+			state->mInventoryUUID = new_cat_id;
+			gSavedPerAccountSettings.setBOOL("LockAOFolders", FALSE);
+
+			// add all queued animations to this state's folder and then clear the queue
+			for (const auto item : state->mAddQueue)
+			{
+				createAnimationLink(state, item);
+			}
+			state->mAddQueue.clear();
+
+			gSavedPerAccountSettings.setBOOL("LockAOFolders", wasProtected);
+
+			if (reload)
+			{
+				mTimerCollection.enableReloadTimer(true);
+			}
+		});
+	}
 }
 
 bool AOEngine::findForeignItems(const LLUUID& uuid) const
@@ -1277,15 +1329,18 @@ void AOEngine::reloadStateAnimations(AOSet::AOState* state)
 				<< " asset " << item->getAssetUUID() << LL_ENDL;
 
 			AOSet::AOAnimation anim;
-			anim.mAssetUUID = item->getAssetUUID();
-			LLViewerInventoryItem* linkedItem = item->getLinkedItem();
-			if (!linkedItem)
-			{
-				LL_WARNS("AOEngine") << "linked item for link " << item->LLInventoryItem::getName() << " not found (broken link). Skipping." << LL_ENDL;
-				continue;
-			}
-			anim.mName = linkedItem->LLInventoryItem::getName();
+			anim.mName = item->LLInventoryItem::getName();
 			anim.mInventoryUUID = item->getUUID();
+			anim.mOriginalUUID = item->getLinkedUUID();
+
+			anim.mAssetUUID = LLUUID::null;
+
+			// if we can find the original animation already right here, save its asset ID, otherwise this will
+			// be tried again in AOSet::getAnimationForState() and/or AOEngine::cycle()
+			if (item->getLinkedItem())
+			{
+				anim.mAssetUUID = item->getAssetUUID();
+			}
 
 			S32 sortOrder;
 			if (!LLStringUtil::convertToS32(item->LLInventoryItem::getDescription(), sortOrder))
@@ -1331,6 +1386,13 @@ void AOEngine::update()
 {
 	if (mAOFolder.isNull())
 	{
+		return;
+	}
+
+	if (!gInventory.isCategoryComplete(mAOFolder))
+	{
+		LL_DEBUGS("AOEngine") << "#AO folder hasn't fully fetched yet, try again next timer tick." << LL_ENDL;
+		gInventory.fetchDescendentsOf(mAOFolder);
 		return;
 	}
 
@@ -2205,7 +2267,7 @@ void AOEngine::processImport(bool from_timer)
 				while (!state->mAnimations.empty())
 				{
 					LL_DEBUGS("AOEngine") << "linking animation " << state->mAnimations[animationIndex].mName << LL_ENDL;
-					if (createAnimationLink(mImportSet, state, gInventory.getItem(state->mAnimations[animationIndex].mInventoryUUID)))
+					if (createAnimationLink(state, gInventory.getItem(state->mAnimations[animationIndex].mInventoryUUID)))
 					{
 						LL_DEBUGS("AOEngine") << "link success, size " << state->mAnimations.size() << ", removing animation "
 							<< state->mAnimations[animationIndex].mName << " from import state" << LL_ENDL;
